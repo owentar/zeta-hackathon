@@ -1,6 +1,6 @@
 import axios from "axios";
 import clsx from "clsx";
-import { Reducer, useCallback, useReducer, useRef } from "react";
+import { Reducer, useCallback, useEffect, useReducer, useRef } from "react";
 import { Button } from "./components";
 
 type State = {
@@ -40,13 +40,16 @@ export const App = () => {
     state: "idle",
   });
 
+  useEffect(() => {
+    if (state.state === "no_photo" && videoRef.current) {
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => (videoRef.current!.srcObject = stream));
+    }
+  }, [state.state, videoRef.current]);
+
   const startCamera = useCallback(async () => {
     dispatch({ type: "RESET" });
-    if (!canvasRef.current || !videoRef.current) return;
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    videoRef.current.srcObject = stream;
-    const ctx = canvasRef.current.getContext("2d")!;
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   }, [videoRef.current]);
 
   const captureFrame = useCallback(() => {
@@ -65,13 +68,6 @@ export const App = () => {
     );
     const imageDataURL = canvasRef.current.toDataURL("image/jpeg");
     dispatch({ type: "TAKE_PHOTO", payload: imageDataURL });
-
-    // Stop the video stream if it exists
-    if (videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
-    }
   }, [canvasRef.current, videoRef.current]);
 
   const estimateAge = useCallback(async () => {
@@ -98,16 +94,18 @@ export const App = () => {
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
             <div className="border-4 border-dashed border-gray-200 rounded-lg h-96 flex flex-col items-center justify-center">
-              <video
-                ref={videoRef}
-                id="video"
-                autoPlay
-                playsInline
-                className={clsx({
-                  "w-88 h-80": true,
-                  hidden: state.state === "photo_taken",
-                })}
-              ></video>
+              {state.state === "no_photo" && (
+                <video
+                  ref={videoRef}
+                  id="video"
+                  autoPlay
+                  playsInline
+                  className={clsx({
+                    "w-88 h-80": true,
+                    // hidden: state.state === "photo_taken",
+                  })}
+                ></video>
+              )}
               <canvas
                 ref={canvasRef}
                 id="canvas"
