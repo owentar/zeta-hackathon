@@ -3,6 +3,9 @@ import clsx from "clsx";
 import { Reducer, useCallback, useEffect, useReducer, useRef } from "react";
 import { Button } from "./components";
 
+// @ts-ignore
+const API_URL = import.meta.env.VITE_API_URL;
+
 type State = {
   state: "idle" | "no_photo" | "photo_taken" | "age_estimated";
   photo: string | null;
@@ -73,9 +76,12 @@ export const App = () => {
   const estimateAge = useCallback(async () => {
     if (!canvasRef.current) return;
 
-    const { data } = await axios.post<{ age: number }>("/api/estimate-age", {
-      imageDataURL: state.photo,
-    });
+    const { data } = await axios.post<{ age: number }>(
+      `${API_URL}/estimate-age`,
+      {
+        imageDataURL: state.photo,
+      }
+    );
     dispatch({ type: "SET_AGE", payload: data.age });
   }, [canvasRef.current, state.photo]);
 
