@@ -24,5 +24,5 @@ export const estimateAge = async (imageDataURL: string) => {
 
   const response = await axios.post<FacePlusPlusResponse>(API_URL, formData);
 
-  return response.data.faces[0].attributes.age.value;
+  return response.data;
 };

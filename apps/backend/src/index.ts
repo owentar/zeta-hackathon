@@ -22,7 +22,13 @@ app.get("/api/hello", (req, res) => {
 app.post("/api/estimate-age", async (req, res) => {
   const { imageDataURL } = req.body;
 
-  const age = await estimateAge(imageDataURL);
+  const { faces } = await estimateAge(imageDataURL);
+
+  if (faces.length === 0) {
+    return res.status(400).json({ error: "No face detected" });
+  }
+
+  const age = faces[0].attributes.age.value;
 
   res.json({ age });
 });
