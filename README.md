@@ -11,24 +11,25 @@ This is a monorepo containing a full-stack TypeScript application with React fro
 
 - Node.js (v18 or higher)
 - npm (v9 or higher)
+- Yarn (v4)
 
 ## Setup
 
 1. Install dependencies:
 
 ```bash
-npm install
+yarn
 ```
 
 2. Start development servers:
 
 ```bash
 # Start both frontend and backend
-npm run dev
+yarn dev
 
 # Or start them separately
-npm run dev:frontend
-npm run dev:backend
+yarn dev:frontend
+yarn dev:backend
 ```
 
 ## Deployment
@@ -38,8 +39,8 @@ npm run dev:backend
 
 ## Available Scripts
 
-- `npm run dev`: Start both frontend and backend in development mode
-- `npm run dev:frontend`: Start only frontend in development mode
-- `npm run dev:backend`: Start only backend in development mode
-- `npm run build`: Build all applications
-- `npm run test`: Run tests across all applications
+- `yarn dev`: Start both frontend and backend in development mode
+- `yarn dev:frontend`: Start only frontend in development mode
+- `yarn dev:backend`: Start only backend in development mode
+- `yarn build`: Build all applications
+- `yarn test`: Run tests across all applications
