@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+  db:
+    container_name: age-lens-database
+    image: postgres:15
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: age_lens
+      POSTGRES_PASSWORD: age_lens
+      POSTGRES_DB: age_lens_db
+
+  redis:
+    image: redis:7.0.5-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
