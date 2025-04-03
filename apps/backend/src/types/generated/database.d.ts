@@ -18,6 +18,7 @@ export interface AirdroppedWallets {
   created_at: Generated<Timestamp>;
   id: Generated<number>;
   status: Generated<AirdropStatus>;
+  tx_hash: string | null;
   updated_at: Generated<Timestamp>;
   wallet_address: string;
 }

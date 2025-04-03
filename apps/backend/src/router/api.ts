@@ -53,6 +53,7 @@ apiRouter.post("/estimate-age", async (req, res) => {
     // Add to airdrop queue
     await airdropQueue.add("airdrop", {
       walletAddress,
+      chainId,
     });
   }
 

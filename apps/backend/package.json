@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "tsx src/index",
+    "dev:airdropConsumer": "tsx src/airdropConsumer",
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:airdropConsumer": "node dist/airdropConsumer.js",
     "lint": "eslint . --ext .ts",
     "codegen": "node -r dotenv/config ../../node_modules/.bin/kysely-codegen --out-file ./src/types/generated/database.d.ts",
     "migrate": "tsx ./src/db/migrate",
