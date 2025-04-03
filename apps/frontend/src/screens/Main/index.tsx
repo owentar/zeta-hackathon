@@ -1,4 +1,7 @@
+import { useMutation } from "@tanstack/react-query";
 import { Reducer, useCallback, useReducer, useRef } from "react";
+import { toast } from "react-toastify";
+import { useAccount } from "wagmi";
 import BackendAPI from "../../services/backend";
 import { AgeEstimated } from "./AgeEstimated";
 import { NoPhoto } from "./NoPhoto";
@@ -33,6 +36,7 @@ const reducer: Reducer<State, Action> = (state, action) => {
 };
 
 export const Main: React.FC = () => {
+  const { address, chainId } = useAccount();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [state, dispatch] = useReducer(reducer, {
     photo: null,
@@ -65,12 +69,35 @@ export const Main: React.FC = () => {
     [canvasRef.current]
   );
 
-  const estimateAge = useCallback(async () => {
-    if (!canvasRef.current || !state.photo) return;
+  const { mutate: estimateAge } = useMutation({
+    mutationFn: async () => {
+      if (!state.photo) {
+        toast.warning("Please take a photo first");
+        return;
+      }
+      return BackendAPI.estimateAge({
+        imageDataURL: state.photo,
+        walletAddress: address!,
+        chainId: chainId!,
+      });
+    },
+    onSuccess: (data) => {
+      if (!data) return;
 
-    const { age } = await BackendAPI.estimateAge(state.photo);
-    dispatch({ type: "SET_AGE", payload: age });
-  }, [canvasRef.current, state.photo]);
+      dispatch({ type: "SET_AGE", payload: data.age });
+      if (data.isRewarded) {
+        toast.success("You will receive a ZETA airdrop!");
+      }
+    },
+    onError: (error) => {
+      if (error) {
+        toast.warning("Please make sure there's only one person in the photo");
+      } else {
+        toast.error("Error trying to estimate age");
+        console.error("Error trying to estimate age", error);
+      }
+    },
+  });
 
   return (
     <>
