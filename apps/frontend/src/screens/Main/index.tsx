@@ -90,11 +90,11 @@ export const Main: React.FC = () => {
       }
     },
     onError: (error) => {
+      console.error("Error estimating age", error);
       if (error) {
         toast.warning("Please make sure there's only one person in the photo");
       } else {
         toast.error("Error trying to estimate age");
-        console.error("Error trying to estimate age", error);
       }
     },
   });

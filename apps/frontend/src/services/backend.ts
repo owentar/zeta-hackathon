@@ -1,6 +1,5 @@
 import axios from "axios";
 
-// @ts-ignore
 const API_URL = import.meta.env.VITE_API_URL;
 
 const estimateAge = async ({
@@ -14,13 +13,51 @@ const estimateAge = async ({
 }) => {
   const { data } = await axios.post<{
     age: number;
-    hasMultipleFaces: boolean;
+    cloudinaryPublicId: string;
     isRewarded: boolean;
+    estimationId: number;
   }>(`${API_URL}/estimate-age`, {
     imageDataURL,
     walletAddress,
     chainId,
   });
+  return data;
+};
+
+export const getAgeEstimation = async (id: string) => {
+  const response = await fetch(`${API_URL}/age-estimation/${id}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch age estimation");
+  }
+  return response.json();
+};
+
+export interface AgeEstimation {
+  id: string;
+  cloudinary_public_id: string;
+  estimated_age: number;
+  wallet_address: string;
+  chain_id: number;
+  created_at: string;
+}
+
+export interface AgeEstimationsResponse {
+  items: AgeEstimation[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export const getAgeEstimations = async (
+  limit: number = 5,
+  offset: number = 0
+) => {
+  const { data } = await axios.get<AgeEstimationsResponse>(
+    `${API_URL}/age-estimations`,
+    {
+      params: { limit, offset },
+    }
+  );
   return data;
 };
 

@@ -13,6 +13,15 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface AgeEstimations {
+  chain_id: number;
+  cloudinary_public_id: string;
+  created_at: Generated<Timestamp>;
+  estimated_age: number;
+  id: Generated<string>;
+  wallet_address: string;
+}
+
 export interface AirdroppedWallets {
   chain_id: Generated<number>;
   created_at: Generated<Timestamp>;
@@ -24,5 +33,6 @@ export interface AirdroppedWallets {
 }
 
 export interface DB {
+  age_estimations: AgeEstimations;
   airdropped_wallets: AirdroppedWallets;
 }
