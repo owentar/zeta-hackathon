@@ -1,6 +1,9 @@
 import "@nomicfoundation/hardhat-toolbox";
 import "@typechain/hardhat";
+import * as dotenv from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
+
+dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -19,14 +22,18 @@ const config: HardhatUserConfig = {
     localhost: {
       url: "http://127.0.0.1:8545",
     },
-    zetachainMainnet: {
-      url: "https://zetachain-evm.blockpi.network/v1/rpc/public",
-      chainId: 7000,
+    zetaTestnet: {
+      url:
+        process.env.ZETA_TESTNET_RPC_URL ||
+        "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
+      chainId: 7001,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
-    zetachainTestnet: {
-      url: "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
-      chainId: 7001,
+    zetaMainnet: {
+      url:
+        process.env.ZETA_MAINNET_RPC_URL ||
+        "https://zetachain-evm.blockpi.network/v1/rpc/public",
+      chainId: 7000,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },
@@ -51,6 +58,30 @@ const config: HardhatUserConfig = {
     dontOverrideCompile: false,
     externalArtifacts: ["externalArtifacts/*.json"],
   },
+  // etherscan: {
+  //   apiKey: {
+  //     zetaTestnet: process.env.ZETASCAN_API_KEY || "",
+  //     zetaMainnet: process.env.ZETASCAN_API_KEY || "",
+  //   },
+  //   customChains: [
+  //     {
+  //       network: "zetaTestnet",
+  //       chainId: 7001,
+  //       urls: {
+  //         apiURL: "https://explorer.zetachain.com/api",
+  //         browserURL: "https://explorer.zetachain.com",
+  //       },
+  //     },
+  //     {
+  //       network: "zetaMainnet",
+  //       chainId: 7000,
+  //       urls: {
+  //         apiURL: "https://explorer.zetachain.com/api",
+  //         browserURL: "https://explorer.zetachain.com",
+  //       },
+  //     },
+  //   ],
+  // },
 };
 
 export default config;

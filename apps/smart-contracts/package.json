@@ -6,11 +6,13 @@
   "scripts": {
     "clean": "rm -rf typechain-types && hardhat clean",
     "compile": "hardhat compile",
-    "deploy:testnet": "hardhat run scripts/deploy.ts --network zetachainTestnet",
-    "deploy:mainnet": "hardhat run scripts/deploy.ts --network zetachainMainnet",
+    "deploy:testnet": "hardhat run scripts/deploy.ts --network zetaTestnet",
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network zetaMainnet",
     "test": "hardhat test",
     "typechain": "typechain --target ethers-v6 \"contracts/**/*.sol\" --out-dir typechain",
-    "coverage": "hardhat coverage"
+    "coverage": "hardhat coverage",
+    "verify:testnet": "hardhat verify --network zetaTestnet",
+    "verify:mainnet": "hardhat verify --network zetaMainnet"
   },
   "author": "",
   "license": "ISC",
@@ -37,6 +39,7 @@
     "solidity-coverage": "^0.8.1",
     "ts-node": "^10.9.2",
     "typechain": "^8.3.2",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "dotenv": "^16.4.5"
   }
 }
