@@ -12,7 +12,7 @@ export const Button: React.FC<
   return (
     <button
       className={clsx(
-        "bg-[#C4594F] rounded-lg text-white font-bold px-6 py-4 flex items-center gap-2",
+        "bg-[#C4594F] rounded-lg text-white text-[32px] font-bold px-6 py-4 flex items-center gap-2",
         className
       )}
       onClick={onClick}

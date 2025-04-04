@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "../../components";
+import { Button, CameraIcon, ThumbUpIcon } from "../../components";
 
 export const PhotoTaken: React.FC<{
   photo: string;
@@ -20,8 +20,18 @@ export const PhotoTaken: React.FC<{
         <img className="w-full h-full object-cover" src={photo} />
       </div>
       <div className="flex gap-2">
-        <Button onClick={onRetakePhoto}>Retake</Button>
-        <Button onClick={handleEstimateAge} disabled={isEstimating}>
+        <Button
+          onClick={onRetakePhoto}
+          icon={<CameraIcon />}
+          disabled={isEstimating}
+        >
+          Retake
+        </Button>
+        <Button
+          onClick={handleEstimateAge}
+          icon={<ThumbUpIcon />}
+          disabled={isEstimating}
+        >
           {isEstimating ? "Estimating..." : "Estimate Age"}
         </Button>
       </div>

@@ -1,12 +1,15 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import clsx from "clsx";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { useIsMobile } from "../hooks";
 import { Button } from "./Button";
-import { CloseIcon, MenuIcon } from "./icons";
+import { CloseIcon, Logo, MenuIcon } from "./icons";
 
-export const MainMenu: React.FC = () => {
+export const MainMenu: React.FC<{ withLogo?: boolean }> = ({
+  withLogo = false,
+}) => {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
   const { isConnected } = useAccount();
@@ -15,8 +18,21 @@ export const MainMenu: React.FC = () => {
     return (
       <div className="relative z-50">
         {!isOpen && (
-          <div className="absolute top-0 right-0">
-            <Button className="bg-transparent" onClick={() => setIsOpen(true)}>
+          <div
+            className={clsx("flex items-center", {
+              "justify-end": !withLogo,
+              "justify-between": withLogo,
+            })}
+          >
+            {withLogo && (
+              <Link to="/">
+                <Logo />
+              </Link>
+            )}
+            <Button
+              className="bg-transparent !p-0"
+              onClick={() => setIsOpen(true)}
+            >
               <MenuIcon />
             </Button>
           </div>
@@ -32,8 +48,13 @@ export const MainMenu: React.FC = () => {
               </Button>
             </div>
             {isConnected && (
-              <div className="m-4 py-14 rounded-lg bg-[#000B26] bg-opacity-80">
+              <div className="py-14 rounded-lg bg-[#000B26] bg-opacity-80">
                 <nav className="flex flex-col gap-14 items-center justify-center">
+                  {withLogo && (
+                    <Link to="/">
+                      <Logo />
+                    </Link>
+                  )}
                   <Link
                     to="/how_to_play"
                     className="text-white text-[42px] font-medium py-3 px-6 transition-colors"
@@ -58,6 +79,11 @@ export const MainMenu: React.FC = () => {
 
   return (
     <nav className="flex items-center justify-evenly">
+      {withLogo && (
+        <Link to="/">
+          <Logo />
+        </Link>
+      )}
       <Link
         to="/how_to_play"
         className="text-white text-[32px] font-medium py-3 px-6 transition-colors"

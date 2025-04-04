@@ -11,6 +11,7 @@ type State = {
   state: "no_photo" | "photo_taken" | "age_estimated";
   photo: string | null;
   age: number | null;
+  estimationId: string | null;
 };
 
 type Action =
@@ -20,7 +21,7 @@ type Action =
     }
   | {
       type: "SET_AGE";
-      payload: number;
+      payload: { age: number; estimationId: string };
     }
   | { type: "RESET" };
 
@@ -29,9 +30,14 @@ const reducer: Reducer<State, Action> = (state, action) => {
     case "TAKE_PHOTO":
       return { ...state, photo: action.payload, state: "photo_taken" };
     case "SET_AGE":
-      return { ...state, age: action.payload, state: "age_estimated" };
+      return {
+        ...state,
+        age: action.payload.age,
+        estimationId: action.payload.estimationId,
+        state: "age_estimated",
+      };
     case "RESET":
-      return { photo: null, age: null, state: "no_photo" };
+      return { photo: null, age: null, estimationId: null, state: "no_photo" };
   }
 };
 
@@ -41,6 +47,7 @@ export const Main: React.FC = () => {
   const [state, dispatch] = useReducer(reducer, {
     photo: null,
     age: null,
+    estimationId: null,
     state: "no_photo",
   });
 
@@ -84,7 +91,10 @@ export const Main: React.FC = () => {
     onSuccess: (data) => {
       if (!data) return;
 
-      dispatch({ type: "SET_AGE", payload: data.age });
+      dispatch({
+        type: "SET_AGE",
+        payload: data,
+      });
       if (data.isRewarded) {
         toast.success("You will receive a ZETA airdrop!");
       }
@@ -111,7 +121,11 @@ export const Main: React.FC = () => {
         />
       )}
       {state.state === "age_estimated" && (
-        <AgeEstimated photo={state.photo!} age={state.age!} />
+        <AgeEstimated
+          photo={state.photo!}
+          age={state.age!}
+          estimationId={state.estimationId!}
+        />
       )}
     </>
   );

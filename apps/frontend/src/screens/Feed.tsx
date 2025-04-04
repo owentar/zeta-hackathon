@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { MainMenu } from "../components";
 import { getAgeEstimations } from "../services/backend";
 import CloudinaryService from "../services/cloudinary.service";
 
@@ -27,6 +28,9 @@ export const Feed = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <div className="min-h-20">
+        <MainMenu withLogo />
+      </div>
       <h1 className="text-3xl font-bold mb-8 text-center">Recent Guesses</h1>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {data?.items.map((estimation) => {

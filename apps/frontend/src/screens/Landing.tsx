@@ -1,14 +1,21 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import clsx from "clsx";
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
 import { MainMenu, WalletIcon } from "../components";
+import { useIsMobile } from "../hooks";
 
 export const Landing = () => {
   const { isConnected } = useAccount();
+  const isMobile = useIsMobile();
 
   return (
     <>
-      <MainMenu />
+      <div className="relative">
+        <div className={clsx({ "absolute top-0 w-full px-6 py-4": isMobile })}>
+          <MainMenu />
+        </div>
+      </div>
       <div
         className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#01184D] relative overflow-hidden bg-cover md:bg-contain"
         style={{
