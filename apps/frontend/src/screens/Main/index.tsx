@@ -76,7 +76,7 @@ export const Main: React.FC = () => {
     [canvasRef.current]
   );
 
-  const { mutate: estimateAge } = useMutation({
+  const { mutate: estimateAge, isPending: isEstimating } = useMutation({
     mutationFn: async () => {
       if (!state.photo) {
         toast.warning("Please take a photo first");
@@ -118,6 +118,7 @@ export const Main: React.FC = () => {
           photo={state.photo!}
           onRetakePhoto={retakePhoto}
           onEstimateAge={estimateAge}
+          isEstimating={isEstimating}
         />
       )}
       {state.state === "age_estimated" && (
