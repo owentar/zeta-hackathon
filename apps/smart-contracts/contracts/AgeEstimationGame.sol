@@ -8,13 +8,14 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 contract AgeEstimationGame is Ownable, ReentrancyGuard {
     struct Game {
         uint256 id;
-        uint256 secretAge;
+        bytes32 secretHash; // Hash of (age + salt)
         uint256 endTime;
         uint256 betAmount;
         uint256 potSize;
         bool isRevealed;
         bool isFinished;
         address owner;
+        uint256 actualAge; // Only set after reveal
     }
 
     struct Bet {
@@ -36,35 +37,56 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
     address public platformWallet;
 
     // Events
-    event GameCreated(uint256 indexed gameId, address indexed owner, uint256 endTime, uint256 betAmount);
-    event BetPlaced(uint256 indexed gameId, address indexed player, uint256 guessedAge);
-    event GameRevealed(uint256 indexed gameId, uint256 secretAge);
+    event GameCreated(
+        uint256 indexed gameId,
+        address indexed owner,
+        uint256 endTime,
+        uint256 betAmount
+    );
+    event BetPlaced(
+        uint256 indexed gameId,
+        address indexed player,
+        uint256 guessedAge
+    );
+    event GameRevealed(uint256 indexed gameId, uint256 actualAge);
     event GameFinished(uint256 indexed gameId, address[] winners);
-    event PrizeClaimed(uint256 indexed gameId, address indexed winner, uint256 amount);
+    event PrizeClaimed(
+        uint256 indexed gameId,
+        address indexed winner,
+        uint256 amount
+    );
 
     constructor(address _platformWallet) Ownable(msg.sender) {
         platformWallet = _platformWallet;
     }
 
-    function createGame(uint256 _secretAge, uint256 _duration, uint256 _betAmount) external {
+    function createGame(
+        bytes32 _secretHash,
+        uint256 _duration,
+        uint256 _betAmount
+    ) external {
         uint256 gameId = gameCount++;
         uint256 endTime = block.timestamp + _duration;
 
         games[gameId] = Game({
             id: gameId,
-            secretAge: _secretAge,
+            secretHash: _secretHash,
             endTime: endTime,
             betAmount: _betAmount,
             potSize: 0,
             isRevealed: false,
             isFinished: false,
-            owner: msg.sender
+            owner: msg.sender,
+            actualAge: 0
         });
 
         emit GameCreated(gameId, msg.sender, endTime, _betAmount);
     }
 
-    function placeBet(uint256 _gameId, uint256 _guessedAge) external payable nonReentrant {
+    function placeBet(
+        uint256 _gameId,
+        uint256 _guessedAge
+    ) external payable nonReentrant {
         Game storage game = games[_gameId];
         require(block.timestamp < game.endTime, "Game has ended");
         require(msg.value == game.betAmount, "Incorrect bet amount");
@@ -72,17 +94,23 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
 
         game.potSize += msg.value;
         hasBet[_gameId][msg.sender] = true;
-        bets[_gameId].push(Bet({
-            player: msg.sender,
-            guessedAge: _guessedAge,
-            isWinner: false,
-            isClaimed: false
-        }));
+        bets[_gameId].push(
+            Bet({
+                player: msg.sender,
+                guessedAge: _guessedAge,
+                isWinner: false,
+                isClaimed: false
+            })
+        );
 
         emit BetPlaced(_gameId, msg.sender, _guessedAge);
     }
 
-    function revealAndFinishGame(uint256 _gameId) external nonReentrant {
+    function revealAndFinishGame(
+        uint256 _gameId,
+        uint256 _actualAge,
+        string memory _salt
+    ) external nonReentrant {
         Game storage game = games[_gameId];
         require(
             msg.sender == game.owner || msg.sender == owner(),
@@ -91,10 +119,15 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
         require(block.timestamp >= game.endTime, "Game not ended yet");
         require(!game.isFinished, "Game already finished");
 
+        // Verify the secret
+        bytes32 computedHash = keccak256(abi.encodePacked(_actualAge, _salt));
+        require(computedHash == game.secretHash, "Invalid age or salt");
+
         game.isRevealed = true;
         game.isFinished = true;
+        game.actualAge = _actualAge;
 
-        emit GameRevealed(_gameId, game.secretAge);
+        emit GameRevealed(_gameId, _actualAge);
 
         // Calculate winners
         Bet[] storage gameBets = bets[_gameId];
@@ -103,7 +136,7 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
 
         // First pass: find minimum difference
         for (uint256 i = 0; i < gameBets.length; i++) {
-            uint256 difference = _absDiff(gameBets[i].guessedAge, game.secretAge);
+            uint256 difference = _absDiff(gameBets[i].guessedAge, _actualAge);
             if (difference < minDifference) {
                 minDifference = difference;
             }
@@ -111,7 +144,7 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
 
         // Second pass: mark winners
         for (uint256 i = 0; i < gameBets.length; i++) {
-            if (_absDiff(gameBets[i].guessedAge, game.secretAge) == minDifference) {
+            if (_absDiff(gameBets[i].guessedAge, _actualAge) == minDifference) {
                 gameBets[i].isWinner = true;
                 winnerCount++;
             }
@@ -120,7 +153,8 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
         // Calculate prize distribution
         uint256 platformFee = (game.potSize * PLATFORM_FEE_PERCENT) / 100;
         uint256 creatorFee = (game.potSize * CREATOR_FEE_PERCENT) / 100;
-        uint256 winnersShare = (game.potSize - platformFee - creatorFee) / winnerCount;
+        uint256 winnersShare = (game.potSize - platformFee - creatorFee) /
+            winnerCount;
 
         // Transfer fees
         (bool success1, ) = platformWallet.call{value: platformFee}("");
@@ -143,7 +177,7 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
     function claimPrize(uint256 _gameId) external nonReentrant {
         Game storage game = games[_gameId];
         require(game.isFinished, "Game not finished");
-        
+
         Bet[] storage gameBets = bets[_gameId];
         uint256 winnerCount = 0;
         uint256 winnersShare = 0;
@@ -161,7 +195,11 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
 
         // Find and transfer prize to the caller if they are a winner
         for (uint256 i = 0; i < gameBets.length; i++) {
-            if (gameBets[i].player == msg.sender && gameBets[i].isWinner && !gameBets[i].isClaimed) {
+            if (
+                gameBets[i].player == msg.sender &&
+                gameBets[i].isWinner &&
+                !gameBets[i].isClaimed
+            ) {
                 gameBets[i].isClaimed = true;
                 (bool success, ) = msg.sender.call{value: winnersShare}("");
                 require(success, "Prize transfer failed");
@@ -186,7 +224,10 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
         return bets[_gameId];
     }
 
-    function getPlayerBet(uint256 _gameId, address _player) external view returns (Bet memory) {
+    function getPlayerBet(
+        uint256 _gameId,
+        address _player
+    ) external view returns (Bet memory) {
         Bet[] storage gameBets = bets[_gameId];
         for (uint256 i = 0; i < gameBets.length; i++) {
             if (gameBets[i].player == _player) {
@@ -195,4 +236,12 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
         }
         revert("Bet not found");
     }
-} 
+
+    // Helper function to compute the hash off-chain
+    function computeHash(
+        uint256 _age,
+        string memory _salt
+    ) external pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_age, _salt));
+    }
+}

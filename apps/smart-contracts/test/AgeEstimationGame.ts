@@ -13,6 +13,7 @@ describe("AgeEstimationGame", function () {
   let platformWallet: SignerWithAddress;
 
   const SECRET_AGE = 25;
+  const SALT = "my-secret-salt";
   const GAME_DURATION = 3600; // 1 hour
   const BET_AMOUNT = ethers.parseEther("0.1");
 
@@ -28,8 +29,10 @@ describe("AgeEstimationGame", function () {
 
   describe("Game Creation", function () {
     it("Should allow anyone to create a game", async function () {
+      const secretHash = await game.computeHash(SECRET_AGE, SALT);
+
       await expect(
-        game.connect(player1).createGame(SECRET_AGE, GAME_DURATION, BET_AMOUNT)
+        game.connect(player1).createGame(secretHash, GAME_DURATION, BET_AMOUNT)
       )
         .to.emit(game, "GameCreated")
         .withArgs(
@@ -41,16 +44,18 @@ describe("AgeEstimationGame", function () {
 
       const gameInfo = await game.getGame(0);
       expect(gameInfo.owner).to.equal(player1.address);
-      expect(gameInfo.secretAge).to.equal(SECRET_AGE);
+      expect(gameInfo.secretHash).to.equal(secretHash);
       expect(gameInfo.betAmount).to.equal(BET_AMOUNT);
       expect(gameInfo.isRevealed).to.be.false;
       expect(gameInfo.isFinished).to.be.false;
+      expect(gameInfo.actualAge).to.equal(0);
     });
   });
 
   describe("Placing Bets", function () {
     beforeEach(async function () {
-      await game.createGame(SECRET_AGE, GAME_DURATION, BET_AMOUNT);
+      const secretHash = await game.computeHash(SECRET_AGE, SALT);
+      await game.createGame(secretHash, GAME_DURATION, BET_AMOUNT);
     });
 
     it("Should allow players to place bets", async function () {
@@ -85,7 +90,8 @@ describe("AgeEstimationGame", function () {
 
   describe("Revealing and Finishing Game", function () {
     beforeEach(async function () {
-      await game.createGame(SECRET_AGE, GAME_DURATION, BET_AMOUNT);
+      const secretHash = await game.computeHash(SECRET_AGE, SALT);
+      await game.createGame(secretHash, GAME_DURATION, BET_AMOUNT);
       await game.connect(player1).placeBet(0, 24, { value: BET_AMOUNT });
       await game.connect(player2).placeBet(0, 25, { value: BET_AMOUNT });
       await game.connect(player3).placeBet(0, 26, { value: BET_AMOUNT });
@@ -93,7 +99,7 @@ describe("AgeEstimationGame", function () {
     });
 
     it("Should allow game owner to reveal and finish game", async function () {
-      await expect(game.revealAndFinishGame(0))
+      await expect(game.revealAndFinishGame(0, SECRET_AGE, SALT))
         .to.emit(game, "GameRevealed")
         .withArgs(0, SECRET_AGE)
         .and.to.emit(game, "GameFinished")
@@ -102,10 +108,11 @@ describe("AgeEstimationGame", function () {
       const gameInfo = await game.getGame(0);
       expect(gameInfo.isRevealed).to.be.true;
       expect(gameInfo.isFinished).to.be.true;
+      expect(gameInfo.actualAge).to.equal(SECRET_AGE);
     });
 
     it("Should allow contract owner to reveal and finish game", async function () {
-      await expect(game.connect(owner).revealAndFinishGame(0))
+      await expect(game.connect(owner).revealAndFinishGame(0, SECRET_AGE, SALT))
         .to.emit(game, "GameRevealed")
         .withArgs(0, SECRET_AGE)
         .and.to.emit(game, "GameFinished")
@@ -114,34 +121,46 @@ describe("AgeEstimationGame", function () {
 
     it("Should not allow others to reveal and finish game", async function () {
       await expect(
-        game.connect(player1).revealAndFinishGame(0)
+        game.connect(player1).revealAndFinishGame(0, SECRET_AGE, SALT)
       ).to.be.revertedWith("Only game owner or contract owner can reveal");
     });
 
     it("Should not allow revealing before game end", async function () {
       // Create a new game and try to reveal immediately
-      await game.createGame(SECRET_AGE, GAME_DURATION, BET_AMOUNT);
-      await expect(game.revealAndFinishGame(1)).to.be.revertedWith(
-        "Game not ended yet"
-      );
+      const secretHash = await game.computeHash(SECRET_AGE, SALT);
+      await game.createGame(secretHash, GAME_DURATION, BET_AMOUNT);
+      await expect(
+        game.revealAndFinishGame(1, SECRET_AGE, SALT)
+      ).to.be.revertedWith("Game not ended yet");
     });
 
     it("Should not allow revealing twice", async function () {
-      await game.revealAndFinishGame(0);
-      await expect(game.revealAndFinishGame(0)).to.be.revertedWith(
-        "Game already finished"
-      );
+      await game.revealAndFinishGame(0, SECRET_AGE, SALT);
+      await expect(
+        game.revealAndFinishGame(0, SECRET_AGE, SALT)
+      ).to.be.revertedWith("Game already finished");
+    });
+
+    it("Should not allow revealing with incorrect age or salt", async function () {
+      await expect(
+        game.revealAndFinishGame(0, SECRET_AGE + 1, SALT)
+      ).to.be.revertedWith("Invalid age or salt");
+
+      await expect(
+        game.revealAndFinishGame(0, SECRET_AGE, "wrong-salt")
+      ).to.be.revertedWith("Invalid age or salt");
     });
   });
 
   describe("Claiming Prizes", function () {
     beforeEach(async function () {
-      await game.createGame(SECRET_AGE, GAME_DURATION, BET_AMOUNT);
+      const secretHash = await game.computeHash(SECRET_AGE, SALT);
+      await game.createGame(secretHash, GAME_DURATION, BET_AMOUNT);
       await game.connect(player1).placeBet(0, 24, { value: BET_AMOUNT });
       await game.connect(player2).placeBet(0, 25, { value: BET_AMOUNT });
       await game.connect(player3).placeBet(0, 26, { value: BET_AMOUNT });
       await time.increase(GAME_DURATION + 1);
-      await game.revealAndFinishGame(0);
+      await game.revealAndFinishGame(0, SECRET_AGE, SALT);
     });
 
     it("Should allow winners to claim their prizes", async function () {
@@ -176,7 +195,8 @@ describe("AgeEstimationGame", function () {
     });
 
     it("Should not allow claiming before game is finished", async function () {
-      await game.createGame(SECRET_AGE, GAME_DURATION, BET_AMOUNT);
+      const secretHash = await game.computeHash(SECRET_AGE, SALT);
+      await game.createGame(secretHash, GAME_DURATION, BET_AMOUNT);
       await game.connect(player1).placeBet(1, 25, { value: BET_AMOUNT });
       await expect(game.connect(player1).claimPrize(1)).to.be.revertedWith(
         "Game not finished"
@@ -186,12 +206,13 @@ describe("AgeEstimationGame", function () {
 
   describe("Multiple Winners", function () {
     beforeEach(async function () {
-      await game.createGame(SECRET_AGE, GAME_DURATION, BET_AMOUNT);
+      const secretHash = await game.computeHash(SECRET_AGE, SALT);
+      await game.createGame(secretHash, GAME_DURATION, BET_AMOUNT);
       await game.connect(player1).placeBet(0, 24, { value: BET_AMOUNT });
       await game.connect(player2).placeBet(0, 25, { value: BET_AMOUNT });
       await game.connect(player3).placeBet(0, 25, { value: BET_AMOUNT });
       await time.increase(GAME_DURATION + 1);
-      await game.revealAndFinishGame(0);
+      await game.revealAndFinishGame(0, SECRET_AGE, SALT);
     });
 
     it("Should split prize between multiple winners", async function () {
