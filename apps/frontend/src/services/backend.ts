@@ -15,7 +15,7 @@ const estimateAge = async ({
     age: number;
     cloudinaryPublicId: string;
     isRewarded: boolean;
-    estimationId: number;
+    estimationId: string;
   }>(`${API_URL}/estimate-age`, {
     imageDataURL,
     walletAddress,
