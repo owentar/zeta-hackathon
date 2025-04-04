@@ -32,6 +32,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.14.0",
     "chai": "^4.3.11",
+    "dotenv": "^16.4.5",
     "ethers": "^6.13.5",
     "hardhat": "^2.22.19",
     "hardhat-gas-reporter": "^1.0.8",
@@ -39,7 +40,6 @@
     "solidity-coverage": "^0.8.1",
     "ts-node": "^10.9.2",
     "typechain": "^8.3.2",
-    "typescript": "^5.8.2",
-    "dotenv": "^16.4.5"
+    "typescript": "^5.8.2"
   }
 }
