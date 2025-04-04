@@ -1,18 +1,14 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
-import { WalletIcon } from "../components/icons";
+import { MainMenu, WalletIcon } from "../components";
 
 export const Landing = () => {
   const { isConnected } = useAccount();
 
   return (
     <>
-      {isConnected && (
-        <div className="absolute top-4 right-4 z-10">
-          <ConnectButton showBalance={false} />
-        </div>
-      )}
+      <MainMenu />
       <div
         className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#01184D] relative overflow-hidden bg-cover md:bg-contain"
         style={{

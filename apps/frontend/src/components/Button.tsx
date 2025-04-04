@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { PropsWithChildren } from "react";
 
 export const Button: React.FC<
@@ -5,11 +6,15 @@ export const Button: React.FC<
     onClick: () => void;
     icon?: React.ReactNode;
     disabled?: boolean;
+    className?: string;
   }>
-> = ({ children, onClick, icon, disabled }) => {
+> = ({ children, onClick, icon, disabled, className }) => {
   return (
     <button
-      className="bg-[#C4594F] rounded-lg text-white font-bold px-6 py-4 flex items-center gap-2"
+      className={clsx(
+        "bg-[#C4594F] rounded-lg text-white font-bold px-6 py-4 flex items-center gap-2",
+        className
+      )}
       onClick={onClick}
       disabled={disabled}
     >
