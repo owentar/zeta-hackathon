@@ -2,6 +2,11 @@ import { Kysely, sql } from "kysely";
 
 export async function up(db: Kysely<any>): Promise<void> {
   await db.schema
+    .createType("age_estimation_status")
+    .asEnum(["UNREVEALED", "REVEALED"])
+    .execute();
+
+  await db.schema
     .createTable("age_estimations")
     .addColumn("id", "uuid", (col) =>
       col.primaryKey().defaultTo(sql`gen_random_uuid()`)
@@ -10,6 +15,10 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn("estimated_age", "integer", (col) => col.notNull())
     .addColumn("wallet_address", "text", (col) => col.notNull())
     .addColumn("chain_id", "integer", (col) => col.notNull())
+    .addColumn("status", sql`age_estimation_status`, (col) =>
+      col.notNull().defaultTo("UNREVEALED")
+    )
+    .addColumn("salt", "text")
     .addColumn("created_at", "timestamp", (col) =>
       col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
     )

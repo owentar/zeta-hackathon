@@ -18,3 +18,12 @@ export const estimateAgeSchema = z.object({
       message: "Chain ID must be either 7000 or 7001",
     }),
 });
+
+export const ageEstimationIdSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const listAgeEstimationsSchema = z.object({
+  limit: z.number().int().min(1).max(100).default(5),
+  offset: z.number().int().min(0).default(0),
+});

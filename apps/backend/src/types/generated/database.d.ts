@@ -5,6 +5,8 @@
 
 import type { ColumnType } from "kysely";
 
+export type AgeEstimationStatus = "REVEALED" | "UNREVEALED";
+
 export type AirdropStatus = "COMPLETED" | "QUEUED";
 
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
@@ -19,6 +21,8 @@ export interface AgeEstimations {
   created_at: Generated<Timestamp>;
   estimated_age: number;
   id: Generated<string>;
+  salt: string | null;
+  status: Generated<AgeEstimationStatus>;
   wallet_address: string;
 }
 
