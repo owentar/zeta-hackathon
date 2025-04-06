@@ -16,7 +16,7 @@ const getQueue = () => {
     // Create queue instance
     queue = new Queue<AirdropJob>("airdrop", {
       connection: {
-        host: process.env.REDIS_URL || "redis://localhost:6379",
+        url: process.env.REDIS_URL || "redis://localhost:6379",
       },
     });
   }
@@ -97,9 +97,7 @@ export const createAirdropWorker = () => {
     },
     {
       connection: {
-        host: process.env.REDIS_HOST,
-        port: parseInt(process.env.REDIS_PORT || "6379"),
-        password: process.env.REDIS_PASSWORD,
+        url: process.env.REDIS_URL || "redis://localhost:6379",
       },
       concurrency: 1, // Ensure only one job is processed at a time
     }
