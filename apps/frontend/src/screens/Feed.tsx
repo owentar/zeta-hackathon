@@ -11,7 +11,7 @@ import CloudinaryService from "../services/cloudinary.service";
 
 const ITEMS_PER_PAGE = 9;
 
-const LensGuess: React.FC<{ id: string; age?: number; imageUrl: string }> = ({
+const LensGuess: React.FC<{ id: number; age?: number; imageUrl: string }> = ({
   id,
   age,
   imageUrl,

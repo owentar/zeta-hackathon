@@ -6,7 +6,7 @@ interface SocialShareProps {
   imageUrl: string;
 }
 
-export const SocialShare = ({ title, url, imageUrl }: SocialShareProps) => {
+export const SocialShare = ({ title, url }: SocialShareProps) => {
   const shareText = `I just placed a bet on Age Lens! Can you guess the age better than me? ${title}`;
 
   const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
