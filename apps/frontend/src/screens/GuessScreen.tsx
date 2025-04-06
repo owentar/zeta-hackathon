@@ -7,7 +7,7 @@ import { Helmet } from "react-helmet-async";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAccount, useWalletClient } from "wagmi";
-import { Button, Logo } from "../components";
+import { Button, Logo, SocialShare } from "../components";
 import BackendAPI from "../services/backend";
 import CloudinaryService from "../services/cloudinary.service";
 
@@ -24,6 +24,7 @@ interface GameInfo {
   endTime: bigint;
   isFinished: boolean;
   betAmount: bigint;
+  owner: string;
 }
 
 interface UserBet {
@@ -80,6 +81,7 @@ export const GuessScreen = () => {
         endTime: game.endTime,
         isFinished: game.isFinished,
         betAmount: game.betAmount,
+        owner: game.owner,
       } as GameInfo;
     },
     enabled: !!ageEstimation && !!walletClient,
@@ -140,6 +142,38 @@ export const GuessScreen = () => {
     onError: (error) => {
       toast.error("Failed to place bet. Please try again.");
       console.error("Place bet error:", error);
+    },
+  });
+
+  const revealAndFinishMutation = useMutation({
+    mutationFn: async () => {
+      // TODO: Implement this
+      // if (!walletClient || !ageEstimation)
+      //   throw new Error("No wallet connected or age estimation not found");
+      // if (!ageEstimation.salt)
+      //   throw new Error("No salt found for this age estimation");
+      // if (!ageEstimation.estimated_age)
+      //   throw new Error("No estimated age found for this age estimation");
+      // // Convert wallet client to ethers signer
+      // const provider = new ethers.BrowserProvider(walletClient);
+      // const signer = await provider.getSigner();
+      // const contract = AgeEstimationGame__factory.connect(
+      //   import.meta.env.VITE_CONTRACT_ADDRESS,
+      //   signer
+      // );
+      // const tx = await contract.revealAndFinishGame(
+      //   BigInt(estimationId),
+      //   BigInt(ageEstimation.estimated_age),
+      //   ageEstimation.salt
+      // );
+      // await tx.wait();
+    },
+    onSuccess: () => {
+      toast.success("Game revealed and finished successfully!");
+    },
+    onError: (error) => {
+      toast.error("Failed to reveal and finish game. Please try again.");
+      console.error("Reveal and finish game error:", error);
     },
   });
 
@@ -282,6 +316,22 @@ export const GuessScreen = () => {
                   Your guess: {userBet.guessedAge.toString()}
                 </div>
               )}
+              {gameInfo && ageEstimation && (
+                <div className="flex flex-col gap-4">
+                  {gameInfo.owner === address &&
+                    gameInfo.endTime < Date.now() / 1000 &&
+                    !gameInfo.isFinished && (
+                      <Button
+                        onClick={() => revealAndFinishMutation.mutate()}
+                        disabled={revealAndFinishMutation.isPending}
+                      >
+                        {revealAndFinishMutation.isPending
+                          ? "Revealing..."
+                          : "Reveal and Finish Game"}
+                      </Button>
+                    )}
+                </div>
+              )}
             </>
           )}
           {gameInfo?.isFinished && (
@@ -290,6 +340,13 @@ export const GuessScreen = () => {
             </div>
           )}
         </div>
+        {isConnected && userBet && (
+          <SocialShare
+            title={`I bet Age Lens guessed ${userBet.guessedAge.toString()} years! How about you?`}
+            url={window.location.href}
+            imageUrl={imageUrl}
+          />
+        )}
       </div>
     </>
   );

@@ -47,7 +47,7 @@ export const AgeEstimated: React.FC<{
       );
 
       // Game duration: 10 minutes
-      const duration = 10 * 60;
+      const duration = 2 * 60;
       // Bet amount: 0.1 ZETA
       const betAmount = ethers.parseEther("0.01");
 
