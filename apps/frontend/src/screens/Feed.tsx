@@ -2,6 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useInView } from "react-intersection-observer";
 import { Link } from "react-router-dom";
+import { useAccount } from "wagmi";
 import { MainMenu } from "../components";
 import BackendAPI, {
   type AgeEstimation,
@@ -33,6 +34,7 @@ const LensGuess: React.FC<{ id: number; age?: number; imageUrl: string }> = ({
 
 export const Feed = () => {
   const { ref: loadMoreRef, inView } = useInView();
+  const { chainId } = useAccount();
 
   const {
     data,
@@ -41,10 +43,16 @@ export const Feed = () => {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: ["ageEstimations"],
-    queryFn: ({ pageParam = 0 }) =>
-      BackendAPI.getAgeEstimations(ITEMS_PER_PAGE, pageParam * ITEMS_PER_PAGE),
+  } = useInfiniteQuery<AgeEstimationsResponse, Error>({
+    queryKey: ["ageEstimations", chainId],
+    queryFn: (context) => {
+      const pageParam = context.pageParam as number;
+      return BackendAPI.getAgeEstimations(
+        ITEMS_PER_PAGE,
+        pageParam * ITEMS_PER_PAGE,
+        chainId
+      );
+    },
     getNextPageParam: (lastPage: AgeEstimationsResponse) => {
       const nextOffset = lastPage.offset + lastPage.items.length;
       return nextOffset < lastPage.total

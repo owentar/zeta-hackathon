@@ -65,11 +65,15 @@ export interface AgeEstimationsResponse {
   offset: number;
 }
 
-const getAgeEstimations = async (limit: number = 5, offset: number = 0) => {
+const getAgeEstimations = async (
+  limit: number = 5,
+  offset: number = 0,
+  chainId?: number
+) => {
   const { data } = await axios.get<AgeEstimationsResponse>(
     `${API_URL}/age-estimations`,
     {
-      params: { limit, offset },
+      params: { limit, offset, chain_id: chainId },
     }
   );
   return data;

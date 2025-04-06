@@ -11,6 +11,7 @@ export type CreateAgeEstimationParams = {
 export type ListAgeEstimationsParams = {
   limit: number;
   offset: number;
+  chain_id?: number;
 };
 
 export type CreateAirdroppedWalletParams = {
@@ -95,11 +96,17 @@ export const startGame = async (id: number, salt: string) => {
 };
 
 export const listAgeEstimations = async (params: ListAgeEstimationsParams) => {
-  const ageEstimations = await db
+  let query = db
     .selectFrom("age_estimations")
     .orderBy("created_at", "desc")
     .limit(params.limit)
-    .offset(params.offset)
+    .offset(params.offset);
+
+  if (params.chain_id !== undefined) {
+    query = query.where("chain_id", "=", params.chain_id);
+  }
+
+  const ageEstimations = await query
     .select([
       "id",
       "cloudinary_public_id",
@@ -115,8 +122,13 @@ export const listAgeEstimations = async (params: ListAgeEstimationsParams) => {
     ])
     .execute();
 
-  const totalCount = await db
-    .selectFrom("age_estimations")
+  let totalCountQuery = db.selectFrom("age_estimations");
+
+  if (params.chain_id !== undefined) {
+    totalCountQuery = totalCountQuery.where("chain_id", "=", params.chain_id);
+  }
+
+  const totalCount = await totalCountQuery
     .select(({ fn }) => [fn.count<number>("id").as("total")])
     .executeTakeFirst();
 

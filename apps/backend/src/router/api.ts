@@ -211,6 +211,7 @@ apiRouter.get("/age-estimations", async (req, res) => {
   const result = listAgeEstimationsSchema.safeParse({
     limit: Number(req.query.limit),
     offset: Number(req.query.offset),
+    chain_id: req.query.chain_id ? Number(req.query.chain_id) : undefined,
   });
 
   if (!result.success) {
@@ -218,11 +219,12 @@ apiRouter.get("/age-estimations", async (req, res) => {
     return res.status(400).json(result.error);
   }
 
-  const { limit, offset } = result.data;
+  const { limit, offset, chain_id } = result.data;
 
   const response = await listAgeEstimations({
     limit,
     offset,
+    chain_id,
   });
 
   res.json(response);

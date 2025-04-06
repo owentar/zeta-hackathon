@@ -26,4 +26,5 @@ export const ageEstimationIdSchema = z.object({
 export const listAgeEstimationsSchema = z.object({
   limit: z.number().int().min(1).max(100).default(5),
   offset: z.number().int().min(0).default(0),
+  chain_id: z.number().int().optional(),
 });
