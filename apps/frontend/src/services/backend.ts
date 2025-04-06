@@ -2,40 +2,57 @@ import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-const estimateAge = async ({
-  imageDataURL,
-  walletAddress,
-  chainId,
-}: {
+const estimateAge = async (payload: {
   imageDataURL: string;
   walletAddress: string;
   chainId: number;
 }) => {
   const { data } = await axios.post<{
-    age: number;
     cloudinaryPublicId: string;
-    isRewarded: boolean;
-    estimationId: string;
-  }>(`${API_URL}/estimate-age`, {
-    imageDataURL,
-    walletAddress,
-    chainId,
-  });
+    estimationId: number;
+  }>(`${API_URL}/age-estimation`, payload);
   return data;
 };
 
-export const getAgeEstimation = async (id: string) => {
-  const response = await fetch(`${API_URL}/age-estimation/${id}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch age estimation");
-  }
-  return response.json();
+const getAgeEstimation = async (id: number) => {
+  const { data } = await axios.get<{
+    id: number;
+    cloudinary_public_id: string;
+    estimated_age: number;
+    wallet_address: string;
+    chain_id: number;
+    created_at: string;
+    status: string;
+  }>(`${API_URL}/age-estimation/${id}`);
+  return data;
+};
+
+const revealAgeEstimation = async (id: number) => {
+  const { data } = await axios.post<{
+    id: number;
+    cloudinary_public_id: string;
+    estimated_age: number;
+    wallet_address: string;
+    chain_id: number;
+    created_at: string;
+    status: string;
+  }>(`${API_URL}/age-estimation/${id}/reveal`);
+  return data;
+};
+
+const startGame = async (id: number) => {
+  const { data } = await axios.post<{
+    id: number;
+    ageHash: string;
+    isRewarded: boolean;
+  }>(`${API_URL}/age-estimation/${id}/start-game`);
+  return data;
 };
 
 export interface AgeEstimation {
-  id: string;
+  id: number;
   cloudinary_public_id: string;
-  estimated_age: number;
+  estimated_age?: number;
   wallet_address: string;
   chain_id: number;
   created_at: string;
@@ -48,10 +65,7 @@ export interface AgeEstimationsResponse {
   offset: number;
 }
 
-export const getAgeEstimations = async (
-  limit: number = 5,
-  offset: number = 0
-) => {
+const getAgeEstimations = async (limit: number = 5, offset: number = 0) => {
   const { data } = await axios.get<AgeEstimationsResponse>(
     `${API_URL}/age-estimations`,
     {
@@ -63,6 +77,10 @@ export const getAgeEstimations = async (
 
 const BackendAPI = {
   estimateAge,
+  revealAgeEstimation,
+  startGame,
+  getAgeEstimation,
+  getAgeEstimations,
 };
 
 export default BackendAPI;

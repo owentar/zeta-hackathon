@@ -43,3 +43,15 @@ export const sendAirdrop = async ({
     value: amount,
   });
 };
+
+export const getContract = (chainId: number) => {
+  const provider = new ethers.JsonRpcProvider(gerZetaRpcUrl(chainId));
+  return new ethers.Contract(
+    process.env.AGE_ESTIMATION_GAME_CONTRACT_ADDRESS!,
+    [
+      "function getGame(uint256) view returns (tuple(uint256 id, bytes32 secretHash, uint256 endTime, uint256 betAmount, uint256 potSize, bool isRevealed, bool isFinished, address owner, uint256 actualAge))",
+      "function games(uint256) view returns (tuple(uint256 id, bytes32 secretHash, uint256 endTime, uint256 betAmount, uint256 potSize, bool isRevealed, bool isFinished, address owner, uint256 actualAge))",
+    ],
+    provider
+  );
+};

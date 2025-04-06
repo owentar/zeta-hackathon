@@ -14,8 +14,11 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@contracts/*": ["../smart-contracts/typechain-types/*"]
+    }
   },
-  "include": ["src"],
+  "include": ["src", "../smart-contracts/typechain-types"],
   "references": [{ "path": "./tsconfig.node.json" }]
 } 

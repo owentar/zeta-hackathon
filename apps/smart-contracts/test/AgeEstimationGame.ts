@@ -16,6 +16,7 @@ describe("AgeEstimationGame", function () {
   const SALT = "my-secret-salt";
   const GAME_DURATION = 3600; // 1 hour
   const BET_AMOUNT = ethers.parseEther("0.1");
+  const GAME_ID = 1n; // Use BigInt for game ID
 
   beforeEach(async function () {
     [owner, player1, player2, player3, platformWallet] =
@@ -32,17 +33,19 @@ describe("AgeEstimationGame", function () {
       const secretHash = await game.computeHash(SECRET_AGE, SALT);
 
       await expect(
-        game.connect(player1).createGame(secretHash, GAME_DURATION, BET_AMOUNT)
+        game
+          .connect(player1)
+          .createGame(GAME_ID, secretHash, GAME_DURATION, BET_AMOUNT)
       )
         .to.emit(game, "GameCreated")
         .withArgs(
-          0,
+          GAME_ID,
           player1.address,
           (await time.latest()) + GAME_DURATION,
           BET_AMOUNT
         );
 
-      const gameInfo = await game.getGame(0);
+      const gameInfo = await game.games(GAME_ID);
       expect(gameInfo.owner).to.equal(player1.address);
       expect(gameInfo.secretHash).to.equal(secretHash);
       expect(gameInfo.betAmount).to.equal(BET_AMOUNT);
@@ -55,35 +58,37 @@ describe("AgeEstimationGame", function () {
   describe("Placing Bets", function () {
     beforeEach(async function () {
       const secretHash = await game.computeHash(SECRET_AGE, SALT);
-      await game.createGame(secretHash, GAME_DURATION, BET_AMOUNT);
+      await game.createGame(GAME_ID, secretHash, GAME_DURATION, BET_AMOUNT);
     });
 
     it("Should allow players to place bets", async function () {
-      await expect(game.connect(player1).placeBet(0, 24, { value: BET_AMOUNT }))
+      await expect(
+        game.connect(player1).placeBet(GAME_ID, 24, { value: BET_AMOUNT })
+      )
         .to.emit(game, "BetPlaced")
-        .withArgs(0, player1.address, 24);
+        .withArgs(GAME_ID, player1.address, 24);
 
-      const gameInfo = await game.getGame(0);
+      const gameInfo = await game.games(GAME_ID);
       expect(gameInfo.potSize).to.equal(BET_AMOUNT);
     });
 
     it("Should not allow placing bets after game end", async function () {
       await time.increase(GAME_DURATION + 1);
       await expect(
-        game.connect(player1).placeBet(0, 24, { value: BET_AMOUNT })
+        game.connect(player1).placeBet(GAME_ID, 24, { value: BET_AMOUNT })
       ).to.be.revertedWith("Game has ended");
     });
 
     it("Should not allow placing multiple bets from the same player", async function () {
-      await game.connect(player1).placeBet(0, 24, { value: BET_AMOUNT });
+      await game.connect(player1).placeBet(GAME_ID, 24, { value: BET_AMOUNT });
       await expect(
-        game.connect(player1).placeBet(0, 25, { value: BET_AMOUNT })
+        game.connect(player1).placeBet(GAME_ID, 25, { value: BET_AMOUNT })
       ).to.be.revertedWith("Already placed a bet");
     });
 
     it("Should not allow incorrect bet amount", async function () {
       await expect(
-        game.connect(player1).placeBet(0, 24, { value: BET_AMOUNT + 1n })
+        game.connect(player1).placeBet(GAME_ID, 24, { value: BET_AMOUNT + 1n })
       ).to.be.revertedWith("Incorrect bet amount");
     });
   });
@@ -91,63 +96,70 @@ describe("AgeEstimationGame", function () {
   describe("Revealing and Finishing Game", function () {
     beforeEach(async function () {
       const secretHash = await game.computeHash(SECRET_AGE, SALT);
-      await game.createGame(secretHash, GAME_DURATION, BET_AMOUNT);
-      await game.connect(player1).placeBet(0, 24, { value: BET_AMOUNT });
-      await game.connect(player2).placeBet(0, 25, { value: BET_AMOUNT });
-      await game.connect(player3).placeBet(0, 26, { value: BET_AMOUNT });
+      await game.createGame(GAME_ID, secretHash, GAME_DURATION, BET_AMOUNT);
+      await game.connect(player1).placeBet(GAME_ID, 24, { value: BET_AMOUNT });
+      await game.connect(player2).placeBet(GAME_ID, 25, { value: BET_AMOUNT });
+      await game.connect(player3).placeBet(GAME_ID, 26, { value: BET_AMOUNT });
       await time.increase(GAME_DURATION + 1);
     });
 
     it("Should allow game owner to reveal and finish game", async function () {
-      await expect(game.revealAndFinishGame(0, SECRET_AGE, SALT))
+      await expect(game.revealAndFinishGame(GAME_ID, SECRET_AGE, SALT))
         .to.emit(game, "GameRevealed")
-        .withArgs(0, SECRET_AGE)
+        .withArgs(GAME_ID, SECRET_AGE)
         .and.to.emit(game, "GameFinished")
-        .withArgs(0, [player2.address]);
+        .withArgs(GAME_ID, [player2.address]);
 
-      const gameInfo = await game.getGame(0);
+      const gameInfo = await game.games(GAME_ID);
       expect(gameInfo.isRevealed).to.be.true;
       expect(gameInfo.isFinished).to.be.true;
       expect(gameInfo.actualAge).to.equal(SECRET_AGE);
     });
 
     it("Should allow contract owner to reveal and finish game", async function () {
-      await expect(game.connect(owner).revealAndFinishGame(0, SECRET_AGE, SALT))
+      await expect(
+        game.connect(owner).revealAndFinishGame(GAME_ID, SECRET_AGE, SALT)
+      )
         .to.emit(game, "GameRevealed")
-        .withArgs(0, SECRET_AGE)
+        .withArgs(GAME_ID, SECRET_AGE)
         .and.to.emit(game, "GameFinished")
-        .withArgs(0, [player2.address]);
+        .withArgs(GAME_ID, [player2.address]);
     });
 
     it("Should not allow others to reveal and finish game", async function () {
       await expect(
-        game.connect(player1).revealAndFinishGame(0, SECRET_AGE, SALT)
+        game.connect(player1).revealAndFinishGame(GAME_ID, SECRET_AGE, SALT)
       ).to.be.revertedWith("Only game owner or contract owner can reveal");
     });
 
     it("Should not allow revealing before game end", async function () {
       // Create a new game and try to reveal immediately
       const secretHash = await game.computeHash(SECRET_AGE, SALT);
-      await game.createGame(secretHash, GAME_DURATION, BET_AMOUNT);
+      await game.createGame(
+        GAME_ID + 1n,
+        secretHash,
+        GAME_DURATION,
+        BET_AMOUNT
+      );
       await expect(
-        game.revealAndFinishGame(1, SECRET_AGE, SALT)
+        game.revealAndFinishGame(GAME_ID + 1n, SECRET_AGE, SALT)
       ).to.be.revertedWith("Game not ended yet");
     });
 
     it("Should not allow revealing twice", async function () {
-      await game.revealAndFinishGame(0, SECRET_AGE, SALT);
+      await game.revealAndFinishGame(GAME_ID, SECRET_AGE, SALT);
       await expect(
-        game.revealAndFinishGame(0, SECRET_AGE, SALT)
+        game.revealAndFinishGame(GAME_ID, SECRET_AGE, SALT)
       ).to.be.revertedWith("Game already finished");
     });
 
     it("Should not allow revealing with incorrect age or salt", async function () {
       await expect(
-        game.revealAndFinishGame(0, SECRET_AGE + 1, SALT)
+        game.revealAndFinishGame(GAME_ID, SECRET_AGE + 1, SALT)
       ).to.be.revertedWith("Invalid age or salt");
 
       await expect(
-        game.revealAndFinishGame(0, SECRET_AGE, "wrong-salt")
+        game.revealAndFinishGame(GAME_ID, SECRET_AGE, "wrong-salt")
       ).to.be.revertedWith("Invalid age or salt");
     });
   });
@@ -155,12 +167,12 @@ describe("AgeEstimationGame", function () {
   describe("Claiming Prizes", function () {
     beforeEach(async function () {
       const secretHash = await game.computeHash(SECRET_AGE, SALT);
-      await game.createGame(secretHash, GAME_DURATION, BET_AMOUNT);
-      await game.connect(player1).placeBet(0, 24, { value: BET_AMOUNT });
-      await game.connect(player2).placeBet(0, 25, { value: BET_AMOUNT });
-      await game.connect(player3).placeBet(0, 26, { value: BET_AMOUNT });
+      await game.createGame(GAME_ID, secretHash, GAME_DURATION, BET_AMOUNT);
+      await game.connect(player1).placeBet(GAME_ID, 24, { value: BET_AMOUNT });
+      await game.connect(player2).placeBet(GAME_ID, 25, { value: BET_AMOUNT });
+      await game.connect(player3).placeBet(GAME_ID, 26, { value: BET_AMOUNT });
       await time.increase(GAME_DURATION + 1);
-      await game.revealAndFinishGame(0, SECRET_AGE, SALT);
+      await game.revealAndFinishGame(GAME_ID, SECRET_AGE, SALT);
     });
 
     it("Should allow winners to claim their prizes", async function () {
@@ -169,50 +181,57 @@ describe("AgeEstimationGame", function () {
       const creatorFee = (BET_AMOUNT * 3n * 1n) / 100n;
       const winnersShare = BET_AMOUNT * 3n - platformFee - creatorFee;
 
-      const tx = await game.connect(player2).claimPrize(0);
+      const tx = await game.connect(player2).claimPrize(GAME_ID);
       const receipt = await tx.wait();
       const gasCost = receipt!.gasUsed * receipt!.gasPrice;
 
       await expect(tx)
         .to.emit(game, "PrizeClaimed")
-        .withArgs(0, player2.address, winnersShare);
+        .withArgs(GAME_ID, player2.address, winnersShare);
 
       const finalBalance = await ethers.provider.getBalance(player2.address);
       expect(finalBalance - initialBalance + gasCost).to.equal(winnersShare);
     });
 
     it("Should not allow non-winners to claim prizes", async function () {
-      await expect(game.connect(player1).claimPrize(0)).to.be.revertedWith(
-        "No prize to claim"
-      );
+      await expect(
+        game.connect(player1).claimPrize(GAME_ID)
+      ).to.be.revertedWith("No prize to claim");
     });
 
     it("Should not allow claiming twice", async function () {
-      await game.connect(player2).claimPrize(0);
-      await expect(game.connect(player2).claimPrize(0)).to.be.revertedWith(
-        "No prize to claim"
-      );
+      await game.connect(player2).claimPrize(GAME_ID);
+      await expect(
+        game.connect(player2).claimPrize(GAME_ID)
+      ).to.be.revertedWith("No prize to claim");
     });
 
     it("Should not allow claiming before game is finished", async function () {
       const secretHash = await game.computeHash(SECRET_AGE, SALT);
-      await game.createGame(secretHash, GAME_DURATION, BET_AMOUNT);
-      await game.connect(player1).placeBet(1, 25, { value: BET_AMOUNT });
-      await expect(game.connect(player1).claimPrize(1)).to.be.revertedWith(
-        "Game not finished"
+      await game.createGame(
+        GAME_ID + 1n,
+        secretHash,
+        GAME_DURATION,
+        BET_AMOUNT
       );
+      await game
+        .connect(player1)
+        .placeBet(GAME_ID + 1n, 25, { value: BET_AMOUNT });
+      await expect(
+        game.connect(player1).claimPrize(GAME_ID + 1n)
+      ).to.be.revertedWith("Game not finished");
     });
   });
 
   describe("Multiple Winners", function () {
     beforeEach(async function () {
       const secretHash = await game.computeHash(SECRET_AGE, SALT);
-      await game.createGame(secretHash, GAME_DURATION, BET_AMOUNT);
-      await game.connect(player1).placeBet(0, 24, { value: BET_AMOUNT });
-      await game.connect(player2).placeBet(0, 25, { value: BET_AMOUNT });
-      await game.connect(player3).placeBet(0, 25, { value: BET_AMOUNT });
+      await game.createGame(GAME_ID, secretHash, GAME_DURATION, BET_AMOUNT);
+      await game.connect(player1).placeBet(GAME_ID, 24, { value: BET_AMOUNT });
+      await game.connect(player2).placeBet(GAME_ID, 25, { value: BET_AMOUNT });
+      await game.connect(player3).placeBet(GAME_ID, 25, { value: BET_AMOUNT });
       await time.increase(GAME_DURATION + 1);
-      await game.revealAndFinishGame(0, SECRET_AGE, SALT);
+      await game.revealAndFinishGame(GAME_ID, SECRET_AGE, SALT);
     });
 
     it("Should split prize between multiple winners", async function () {
@@ -223,11 +242,11 @@ describe("AgeEstimationGame", function () {
       const creatorFee = (BET_AMOUNT * 3n * 1n) / 100n;
       const winnersShare = (BET_AMOUNT * 3n - platformFee - creatorFee) / 2n;
 
-      const tx1 = await game.connect(player2).claimPrize(0);
+      const tx1 = await game.connect(player2).claimPrize(GAME_ID);
       const receipt1 = await tx1.wait();
       const gasCost1 = receipt1!.gasUsed * receipt1!.gasPrice;
 
-      const tx2 = await game.connect(player3).claimPrize(0);
+      const tx2 = await game.connect(player3).claimPrize(GAME_ID);
       const receipt2 = await tx2.wait();
       const gasCost2 = receipt2!.gasUsed * receipt2!.gasPrice;
 

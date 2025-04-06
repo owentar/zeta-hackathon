@@ -1,26 +1,56 @@
-import { Queue, Worker } from "bullmq";
+import { Job, Queue, Worker } from "bullmq";
 import { ethers } from "ethers";
 import { db } from "../db";
 import { logger } from "./logger";
 import { sendAirdrop } from "./web3";
 
-interface AirdropJob {
+export interface AirdropJob {
   walletAddress: string;
   chainId: number;
 }
 
-const AIRDROP_QUEUE_NAME = "airdrop-queue";
+let queue: Queue<AirdropJob>;
 
-export const airdropQueue = new Queue<AirdropJob>(AIRDROP_QUEUE_NAME, {
-  connection: {
-    url: process.env.REDIS_URL,
-  },
-});
-airdropQueue.setGlobalConcurrency(1);
+const getQueue = () => {
+  if (!queue) {
+    // Create queue instance
+    queue = new Queue<AirdropJob>("airdrop", {
+      connection: {
+        host: process.env.REDIS_URL || "redis://localhost:6379",
+      },
+    });
+  }
+  return queue;
+};
 
+// Queue operations
+export const addAirdropJob = async (
+  data: AirdropJob
+): Promise<Job<AirdropJob>> => {
+  try {
+    const job = await getQueue().add("airdrop", data);
+    logger.info({ msg: "Added airdrop job", jobId: job.id, data });
+    return job;
+  } catch (error) {
+    logger.error({ msg: "Failed to add airdrop job", error, data });
+    throw error;
+  }
+};
+
+export const closeQueue = async (): Promise<void> => {
+  try {
+    await getQueue().close();
+    logger.info({ msg: "Closed airdrop queue" });
+  } catch (error) {
+    logger.error({ msg: "Failed to close airdrop queue", error });
+    throw error;
+  }
+};
+
+// Worker creation
 export const createAirdropWorker = () => {
   const worker = new Worker<AirdropJob>(
-    AIRDROP_QUEUE_NAME,
+    "airdrop",
     async (job) => {
       const { walletAddress, chainId } = job.data;
 

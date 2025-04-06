@@ -11,7 +11,7 @@ type State = {
   state: "no_photo" | "photo_taken" | "age_estimated";
   photo: string | null;
   age: number | null;
-  estimationId: string | null;
+  estimationId: number | null;
 };
 
 type Action =
@@ -20,8 +20,8 @@ type Action =
       payload: string;
     }
   | {
-      type: "SET_AGE";
-      payload: { age: number; estimationId: string };
+      type: "AGE_ESTIMATED";
+      payload: { estimationId: number };
     }
   | { type: "RESET" };
 
@@ -29,10 +29,9 @@ const reducer: Reducer<State, Action> = (state, action) => {
   switch (action.type) {
     case "TAKE_PHOTO":
       return { ...state, photo: action.payload, state: "photo_taken" };
-    case "SET_AGE":
+    case "AGE_ESTIMATED":
       return {
         ...state,
-        age: action.payload.age,
         estimationId: action.payload.estimationId,
         state: "age_estimated",
       };
@@ -92,12 +91,9 @@ export const Main: React.FC = () => {
       if (!data) return;
 
       dispatch({
-        type: "SET_AGE",
-        payload: data,
+        type: "AGE_ESTIMATED",
+        payload: { estimationId: data.estimationId },
       });
-      if (data.isRewarded) {
-        toast.success("You will receive a ZETA airdrop!");
-      }
     },
     onError: (error) => {
       console.error("Error estimating age", error);
@@ -122,11 +118,7 @@ export const Main: React.FC = () => {
         />
       )}
       {state.state === "age_estimated" && (
-        <AgeEstimated
-          photo={state.photo!}
-          age={state.age!}
-          estimationId={state.estimationId!}
-        />
+        <AgeEstimated photo={state.photo!} estimationId={state.estimationId!} />
       )}
     </>
   );

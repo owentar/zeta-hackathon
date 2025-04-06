@@ -20,7 +20,7 @@ export interface AgeEstimations {
   cloudinary_public_id: string;
   created_at: Generated<Timestamp>;
   estimated_age: number;
-  id: Generated<string>;
+  id: Generated<number>;
   salt: string | null;
   status: Generated<AgeEstimationStatus>;
   wallet_address: string;

@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
 import { useParams } from "react-router-dom";
-import { getAgeEstimation } from "../services/backend";
+import BackendAPI from "../services/backend";
 import CloudinaryService from "../services/cloudinary.service";
 
 interface AgeEstimation {
-  id: string;
+  id: number;
   cloudinary_public_id: string;
   estimated_age: number;
   wallet_address: string;
@@ -15,15 +15,16 @@ interface AgeEstimation {
 
 export const GuessScreen = () => {
   const { id } = useParams<{ id: string }>();
+  const estimationId = id ? parseInt(id, 10) : null;
 
   const {
     data: ageEstimation,
     isLoading,
     error,
   } = useQuery<AgeEstimation>({
-    queryKey: ["ageEstimation", id],
-    queryFn: () => getAgeEstimation(id!),
-    enabled: !!id,
+    queryKey: ["ageEstimation", estimationId],
+    queryFn: () => BackendAPI.getAgeEstimation(estimationId!),
+    enabled: !!estimationId,
   });
 
   if (isLoading) {

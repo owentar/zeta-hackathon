@@ -3,8 +3,7 @@ import { useEffect } from "react";
 import { useInView } from "react-intersection-observer";
 import { Link } from "react-router-dom";
 import { MainMenu } from "../components";
-import {
-  getAgeEstimations,
+import BackendAPI, {
   type AgeEstimation,
   type AgeEstimationsResponse,
 } from "../services/backend";
@@ -12,7 +11,7 @@ import CloudinaryService from "../services/cloudinary.service";
 
 const ITEMS_PER_PAGE = 9;
 
-const LensGuess: React.FC<{ id: string; age: number; imageUrl: string }> = ({
+const LensGuess: React.FC<{ id: string; age?: number; imageUrl: string }> = ({
   id,
   age,
   imageUrl,
@@ -25,7 +24,7 @@ const LensGuess: React.FC<{ id: string; age: number; imageUrl: string }> = ({
         </div>
         <div className="flex flex-col items-center">
           <span className="text-[32px] font-bold">The Lens' Guess</span>
-          <span className="text-[104px] font-bold">{age}</span>
+          <span className="text-[104px] font-bold">{age ?? "?"}</span>
         </div>
       </div>
     </Link>
@@ -45,7 +44,7 @@ export const Feed = () => {
   } = useInfiniteQuery({
     queryKey: ["ageEstimations"],
     queryFn: ({ pageParam = 0 }) =>
-      getAgeEstimations(ITEMS_PER_PAGE, pageParam * ITEMS_PER_PAGE),
+      BackendAPI.getAgeEstimations(ITEMS_PER_PAGE, pageParam * ITEMS_PER_PAGE),
     getNextPageParam: (lastPage: AgeEstimationsResponse) => {
       const nextOffset = lastPage.offset + lastPage.items.length;
       return nextOffset < lastPage.total

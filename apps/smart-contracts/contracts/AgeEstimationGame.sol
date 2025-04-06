@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 // Age Estimation Game Contract
 contract AgeEstimationGame is Ownable, ReentrancyGuard {
     struct Game {
-        uint256 id;
+        uint256 id; // UUID provided by user
         bytes32 secretHash; // Hash of (age + salt)
         uint256 endTime;
         uint256 betAmount;
@@ -30,7 +30,6 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
     uint256 public constant CREATOR_FEE_PERCENT = 1; // 1%
 
     // State variables
-    uint256 public gameCount;
     mapping(uint256 => Game) public games;
     mapping(uint256 => Bet[]) public bets;
     mapping(uint256 => mapping(address => bool)) public hasBet;
@@ -61,15 +60,16 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
     }
 
     function createGame(
+        uint256 _gameId,
         bytes32 _secretHash,
         uint256 _duration,
         uint256 _betAmount
     ) external {
-        uint256 gameId = gameCount++;
+        require(games[_gameId].owner == address(0), "Game ID already exists");
         uint256 endTime = block.timestamp + _duration;
 
-        games[gameId] = Game({
-            id: gameId,
+        games[_gameId] = Game({
+            id: _gameId,
             secretHash: _secretHash,
             endTime: endTime,
             betAmount: _betAmount,
@@ -80,7 +80,7 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
             actualAge: 0
         });
 
-        emit GameCreated(gameId, msg.sender, endTime, _betAmount);
+        emit GameCreated(_gameId, msg.sender, endTime, _betAmount);
     }
 
     function placeBet(
@@ -88,6 +88,7 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
         uint256 _guessedAge
     ) external payable nonReentrant {
         Game storage game = games[_gameId];
+        require(game.owner != address(0), "Game does not exist");
         require(block.timestamp < game.endTime, "Game has ended");
         require(msg.value == game.betAmount, "Incorrect bet amount");
         require(!hasBet[_gameId][msg.sender], "Already placed a bet");
@@ -112,6 +113,7 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
         string memory _salt
     ) external nonReentrant {
         Game storage game = games[_gameId];
+        require(game.owner != address(0), "Game does not exist");
         require(
             msg.sender == game.owner || msg.sender == owner(),
             "Only game owner or contract owner can reveal"
@@ -176,6 +178,7 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
 
     function claimPrize(uint256 _gameId) external nonReentrant {
         Game storage game = games[_gameId];
+        require(game.owner != address(0), "Game does not exist");
         require(game.isFinished, "Game not finished");
 
         Bet[] storage gameBets = bets[_gameId];
@@ -217,10 +220,12 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
 
     // View functions
     function getGame(uint256 _gameId) external view returns (Game memory) {
+        require(games[_gameId].owner != address(0), "Game does not exist");
         return games[_gameId];
     }
 
     function getBets(uint256 _gameId) external view returns (Bet[] memory) {
+        require(games[_gameId].owner != address(0), "Game does not exist");
         return bets[_gameId];
     }
 
@@ -228,6 +233,7 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
         uint256 _gameId,
         address _player
     ) external view returns (Bet memory) {
+        require(games[_gameId].owner != address(0), "Game does not exist");
         Bet[] storage gameBets = bets[_gameId];
         for (uint256 i = 0; i < gameBets.length; i++) {
             if (gameBets[i].player == _player) {

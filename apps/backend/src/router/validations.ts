@@ -20,7 +20,7 @@ export const estimateAgeSchema = z.object({
 });
 
 export const ageEstimationIdSchema = z.object({
-  id: z.string().uuid(),
+  id: z.number({ coerce: true }).int().positive(),
 });
 
 export const listAgeEstimationsSchema = z.object({
