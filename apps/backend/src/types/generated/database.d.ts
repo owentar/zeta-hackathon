@@ -19,6 +19,7 @@ export interface AgeEstimations {
   chain_id: number;
   cloudinary_public_id: string;
   created_at: Generated<Timestamp>;
+  end_date: Timestamp | null;
   estimated_age: number;
   id: Generated<number>;
   salt: string | null;

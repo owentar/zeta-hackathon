@@ -42,6 +42,7 @@ export const GuessScreen = () => {
     data: ageEstimation,
     isLoading,
     error,
+    refetch: refetchAgeEstimation,
   } = useQuery<AgeEstimation>({
     queryKey: ["ageEstimation", estimationId],
     queryFn: () => BackendAPI.getAgeEstimation(estimationId),
@@ -98,6 +99,18 @@ export const GuessScreen = () => {
     enabled: !!ageEstimation && !!walletClient && !!address,
   });
 
+  const { data: allBets } = useQuery({
+    queryKey: ["allBets", estimationId, walletClient?.account.address],
+    queryFn: async () => {
+      if (!ageEstimation || !walletClient) return null;
+
+      const provider = new ethers.BrowserProvider(walletClient);
+
+      return AgeEstimationGameContract.getBets(provider, estimationId);
+    },
+    enabled: !!ageEstimation && !!walletClient && gameInfo?.isFinished,
+  });
+
   const placeBetMutation = useMutation({
     mutationFn: async (age: number) => {
       if (!walletClient || !gameInfo) throw new Error("No wallet connected");
@@ -124,33 +137,38 @@ export const GuessScreen = () => {
 
   const revealAndFinishMutation = useMutation({
     mutationFn: async () => {
-      // TODO: Implement this
-      // if (!walletClient || !ageEstimation)
-      //   throw new Error("No wallet connected or age estimation not found");
-      // if (!ageEstimation.salt)
-      //   throw new Error("No salt found for this age estimation");
-      // if (!ageEstimation.estimated_age)
-      //   throw new Error("No estimated age found for this age estimation");
-      // // Convert wallet client to ethers signer
-      // const provider = new ethers.BrowserProvider(walletClient);
-      // const signer = await provider.getSigner();
-      // const contract = AgeEstimationGame__factory.connect(
-      //   import.meta.env.VITE_CONTRACT_ADDRESS,
-      //   signer
-      // );
-      // const tx = await contract.revealAndFinishGame(
-      //   BigInt(estimationId),
-      //   BigInt(ageEstimation.estimated_age),
-      //   ageEstimation.salt
-      // );
-      // await tx.wait();
+      await BackendAPI.finishGame(estimationId);
     },
     onSuccess: () => {
       toast.success("Game revealed and finished successfully!");
+      refetchAgeEstimation();
     },
     onError: (error) => {
       toast.error("Failed to reveal and finish game. Please try again.");
       console.error("Reveal and finish game error:", error);
+    },
+  });
+
+  const claimPrizeMutation = useMutation({
+    mutationFn: async () => {
+      if (!walletClient) throw new Error("No wallet connected");
+
+      // Convert wallet client to ethers signer
+      const provider = new ethers.BrowserProvider(walletClient);
+
+      const tx = await AgeEstimationGameContract.claimPrize(
+        provider,
+        estimationId
+      );
+      await tx.wait();
+      refetchUserBet();
+    },
+    onSuccess: () => {
+      toast.success("Prize claimed successfully!");
+    },
+    onError: (error) => {
+      toast.error("Failed to claim prize. Please try again.");
+      console.error("Claim prize error:", error);
     },
   });
 
@@ -312,9 +330,52 @@ export const GuessScreen = () => {
             </>
           )}
           {gameInfo?.isFinished && (
-            <div className="mt-4 text-2xl font-bold text-green-500">
-              Game Finished
-            </div>
+            <>
+              <div className="mt-4 text-2xl font-bold text-green-500">
+                Game Finished
+              </div>
+              {userBet && (
+                <div className="mt-8 w-full max-w-lg">
+                  <div
+                    className={`p-4 rounded-lg ${
+                      userBet.isWinner
+                        ? "bg-green-500/20 border border-green-500"
+                        : "bg-white/10"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-lg font-bold">
+                          Your guess: {userBet.guessedAge.toString()}
+                        </p>
+                        {userBet.isWinner ? (
+                          <p className="text-green-500 font-bold">
+                            You won! 🎉
+                          </p>
+                        ) : (
+                          <p className="text-white/60">
+                            Better luck next time!
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {userBet.isWinner && !userBet.isClaimed && (
+                    <Button
+                      onClick={() => claimPrizeMutation.mutate()}
+                      disabled={claimPrizeMutation.isPending}
+                    >
+                      {claimPrizeMutation.isPending
+                        ? "Claiming..."
+                        : "Claim Prize"}
+                    </Button>
+                  )}
+                  {userBet.isWinner && userBet.isClaimed && (
+                    <span className="text-white/60">Prize Claimed</span>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
         {isConnected && userBet && (

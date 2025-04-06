@@ -42,12 +42,39 @@ export const getAgeEstimationById = async (id: number) => {
       "chain_id",
       "created_at",
       "status",
+      "end_date",
       sql<
         number | null
       >`CASE WHEN status = 'REVEALED' THEN estimated_age ELSE NULL END`.as(
         "estimated_age"
       ),
     ])
+    .executeTakeFirst();
+};
+
+export const getFullAgeEstimationById = async (id: number) => {
+  return db
+    .selectFrom("age_estimations")
+    .where("id", "=", id)
+    .select([
+      "id",
+      "cloudinary_public_id",
+      "wallet_address",
+      "chain_id",
+      "created_at",
+      "status",
+      "end_date",
+      "salt",
+      "estimated_age",
+    ])
+    .executeTakeFirst();
+};
+
+export const updateAgeEstimationEndDate = async (id: number, endDate: Date) => {
+  return db
+    .updateTable("age_estimations")
+    .set({ end_date: endDate })
+    .where("id", "=", id)
     .executeTakeFirst();
 };
 
@@ -73,6 +100,7 @@ export const revealAgeEstimation = async (id: number) => {
       "created_at",
       "status",
       "salt",
+      "end_date",
     ])
     .executeTakeFirst();
 };
@@ -91,6 +119,7 @@ export const startGame = async (id: number, salt: string) => {
       "created_at",
       "status",
       "salt",
+      "end_date",
     ])
     .executeTakeFirst();
 };
@@ -114,6 +143,7 @@ export const listAgeEstimations = async (params: ListAgeEstimationsParams) => {
       "chain_id",
       "created_at",
       "status",
+      "end_date",
       sql<
         number | null
       >`CASE WHEN status = 'REVEALED' THEN estimated_age ELSE NULL END`.as(

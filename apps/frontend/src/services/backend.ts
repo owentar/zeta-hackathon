@@ -79,12 +79,26 @@ const getAgeEstimations = async (
   return data;
 };
 
+const finishGame = async (id: number) => {
+  const { data } = await axios.post<{
+    id: number;
+    cloudinary_public_id: string;
+    estimated_age: number;
+    wallet_address: string;
+    chain_id: number;
+    created_at: string;
+    status: string;
+  }>(`${API_URL}/age-estimation/${id}/finish-game`);
+  return data;
+};
+
 const BackendAPI = {
   estimateAge,
   revealAgeEstimation,
   startGame,
   getAgeEstimation,
   getAgeEstimations,
+  finishGame,
 };
 
 export default BackendAPI;

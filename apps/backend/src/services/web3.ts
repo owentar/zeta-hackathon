@@ -44,6 +44,14 @@ export const sendAirdrop = async ({
   });
 };
 
+export const getBackendWallet = (chainId: number) => {
+  const provider = new ethers.JsonRpcProvider(gerZetaRpcUrl(chainId));
+  return new ethers.Wallet(
+    process.env.AGE_ESTIMATION_GAME_ADMIN_PRIVATE_KEY!,
+    provider
+  );
+};
+
 export const getContract = (chainId: number) => {
   const provider = new ethers.JsonRpcProvider(gerZetaRpcUrl(chainId));
   return new ethers.Contract(
@@ -51,6 +59,8 @@ export const getContract = (chainId: number) => {
     [
       "function getGame(uint256) view returns (tuple(uint256 id, bytes32 secretHash, uint256 endTime, uint256 betAmount, uint256 potSize, bool isRevealed, bool isFinished, address owner, uint256 actualAge))",
       "function games(uint256) view returns (tuple(uint256 id, bytes32 secretHash, uint256 endTime, uint256 betAmount, uint256 potSize, bool isRevealed, bool isFinished, address owner, uint256 actualAge))",
+      "function revealAndFinishGame(uint256, uint256, string) external",
+      "function computeHash(uint256, string) view returns (bytes32)",
     ],
     provider
   );

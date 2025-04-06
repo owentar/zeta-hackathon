@@ -699,6 +699,11 @@ const placeBet = async (
   return contract.placeBet(BigInt(gameId), age, { value: BET_AMOUNT });
 };
 
+const getBets = async (provider: BrowserProvider, gameId: number) => {
+  const contract = await getContract(provider);
+  return contract.getBets(BigInt(gameId)) as Promise<UserBet[]>;
+};
+
 const claimPrize = async (provider: BrowserProvider, gameId: number) => {
   const contract = await getContract(provider);
   return contract.claimPrize(BigInt(gameId));
@@ -710,5 +715,6 @@ export const AgeEstimationGameContract = {
   getPlayerBet,
   hasBet,
   placeBet,
+  getBets,
   claimPrize,
 };
