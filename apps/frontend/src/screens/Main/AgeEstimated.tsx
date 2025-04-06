@@ -46,10 +46,10 @@ export const AgeEstimated: React.FC<{
         signer
       );
 
-      // Game duration: 24 hours
-      const duration = 24 * 60 * 60;
+      // Game duration: 10 minutes
+      const duration = 10 * 60;
       // Bet amount: 0.1 ZETA
-      const betAmount = ethers.parseEther("0.1");
+      const betAmount = ethers.parseEther("0.01");
 
       const tx = await contract.createGame(
         ethers.toBigInt(estimationId),
