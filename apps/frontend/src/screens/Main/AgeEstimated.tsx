@@ -1,4 +1,3 @@
-import { AgeEstimationGame__factory } from "@contracts/factories/contracts/AgeEstimationGame__factory";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useMutation } from "@tanstack/react-query";
 import { ethers } from "ethers";
@@ -7,6 +6,7 @@ import { toast } from "react-toastify";
 import { useAccount, useWalletClient } from "wagmi";
 import { Button, Logo } from "../../components";
 import BackendAPI from "../../services/backend";
+import { AgeEstimationGameContract } from "../../services/smart-contract/AgeEstimationGame";
 
 export const AgeEstimated: React.FC<{
   photo: string;
@@ -39,23 +39,11 @@ export const AgeEstimated: React.FC<{
 
       // Convert wallet client to ethers signer
       const provider = new ethers.BrowserProvider(walletClient);
-      const signer = await provider.getSigner();
 
-      const contract = AgeEstimationGame__factory.connect(
-        import.meta.env.VITE_CONTRACT_ADDRESS,
-        signer
-      );
-
-      // Game duration: 10 minutes
-      const duration = 2 * 60;
-      // Bet amount: 0.1 ZETA
-      const betAmount = ethers.parseEther("0.01");
-
-      const tx = await contract.createGame(
-        ethers.toBigInt(estimationId),
-        ageHash,
-        duration,
-        betAmount
+      const tx = await AgeEstimationGameContract.createGame(
+        provider,
+        estimationId,
+        ageHash
       );
 
       await tx.wait();

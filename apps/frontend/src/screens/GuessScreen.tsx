@@ -1,4 +1,3 @@
-import { AgeEstimationGame__factory } from "@contracts/factories/contracts/AgeEstimationGame__factory";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ethers } from "ethers";
@@ -10,29 +9,7 @@ import { useAccount, useWalletClient } from "wagmi";
 import { Button, Logo, SocialShare } from "../components";
 import BackendAPI from "../services/backend";
 import CloudinaryService from "../services/cloudinary.service";
-
-interface AgeEstimation {
-  id: number;
-  cloudinary_public_id: string;
-  estimated_age?: number;
-  wallet_address: string;
-  chain_id: number;
-  created_at: string;
-}
-
-interface GameInfo {
-  endTime: bigint;
-  isFinished: boolean;
-  betAmount: bigint;
-  owner: string;
-}
-
-interface UserBet {
-  player: string;
-  guessedAge: bigint;
-  isWinner: boolean;
-  isClaimed: boolean;
-}
+import { AgeEstimationGameContract } from "../services/smart-contract/AgeEstimationGame";
 
 const formatTimeLeft = (seconds: number): string => {
   const hours = Math.floor(seconds / 3600);
@@ -52,6 +29,15 @@ export const GuessScreen = () => {
   const { isConnected, address } = useAccount();
   const { openConnectModal } = useConnectModal();
 
+  interface AgeEstimation {
+    id: number;
+    cloudinary_public_id: string;
+    estimated_age?: number;
+    wallet_address: string;
+    chain_id: number;
+    created_at: string;
+  }
+
   const {
     data: ageEstimation,
     isLoading,
@@ -69,20 +55,17 @@ export const GuessScreen = () => {
 
       // Convert wallet client to ethers signer
       const provider = new ethers.BrowserProvider(walletClient);
-      const signer = await provider.getSigner();
 
-      const contract = AgeEstimationGame__factory.connect(
-        import.meta.env.VITE_CONTRACT_ADDRESS,
-        signer
+      const game = await AgeEstimationGameContract.getGame(
+        provider,
+        estimationId
       );
-
-      const game = await contract.games(BigInt(estimationId));
       return {
         endTime: game.endTime,
         isFinished: game.isFinished,
         betAmount: game.betAmount,
         owner: game.owner,
-      } as GameInfo;
+      };
     },
     enabled: !!ageEstimation && !!walletClient,
   });
@@ -94,21 +77,19 @@ export const GuessScreen = () => {
 
       // Convert wallet client to ethers signer
       const provider = new ethers.BrowserProvider(walletClient);
-      const signer = await provider.getSigner();
-
-      const contract = AgeEstimationGame__factory.connect(
-        import.meta.env.VITE_CONTRACT_ADDRESS,
-        signer
-      );
 
       try {
-        const bet = await contract.getPlayerBet(BigInt(estimationId), address);
+        const bet = await AgeEstimationGameContract.getPlayerBet(
+          provider,
+          estimationId,
+          address
+        );
         return {
           player: bet.player,
           guessedAge: bet.guessedAge,
           isWinner: bet.isWinner,
           isClaimed: bet.isClaimed,
-        } as UserBet;
+        };
       } catch (error) {
         // If bet doesn't exist, return null
         return null;
@@ -123,16 +104,12 @@ export const GuessScreen = () => {
 
       // Convert wallet client to ethers signer
       const provider = new ethers.BrowserProvider(walletClient);
-      const signer = await provider.getSigner();
 
-      const contract = AgeEstimationGame__factory.connect(
-        import.meta.env.VITE_CONTRACT_ADDRESS,
-        signer
+      const tx = await AgeEstimationGameContract.placeBet(
+        provider,
+        estimationId,
+        age
       );
-
-      const tx = await contract.placeBet(BigInt(estimationId), age, {
-        value: gameInfo.betAmount,
-      });
       await tx.wait();
       refetchUserBet();
     },
