@@ -58,30 +58,30 @@ const config: HardhatUserConfig = {
     dontOverrideCompile: false,
     externalArtifacts: ["externalArtifacts/*.json"],
   },
-  // etherscan: {
-  //   apiKey: {
-  //     zetaTestnet: process.env.ZETASCAN_API_KEY || "",
-  //     zetaMainnet: process.env.ZETASCAN_API_KEY || "",
-  //   },
-  //   customChains: [
-  //     {
-  //       network: "zetaTestnet",
-  //       chainId: 7001,
-  //       urls: {
-  //         apiURL: "https://explorer.zetachain.com/api",
-  //         browserURL: "https://explorer.zetachain.com",
-  //       },
-  //     },
-  //     {
-  //       network: "zetaMainnet",
-  //       chainId: 7000,
-  //       urls: {
-  //         apiURL: "https://explorer.zetachain.com/api",
-  //         browserURL: "https://explorer.zetachain.com",
-  //       },
-  //     },
-  //   ],
-  // },
+  etherscan: {
+    apiKey: {
+      zetaTestnet: "empty",
+      zetaMainnet: "empty",
+    },
+    customChains: [
+      {
+        network: "zetaTestnet",
+        chainId: 7001,
+        urls: {
+          apiURL: "https://zetachain-testnet.blockscout.com/api",
+          browserURL: "https://zetachain-testnet.blockscout.com",
+        },
+      },
+      {
+        network: "zetaMainnet",
+        chainId: 7000,
+        urls: {
+          apiURL: "https://explorer.zetachain.com/api",
+          browserURL: "https://explorer.zetachain.com",
+        },
+      },
+    ],
+  },
 };
 
 export default config;
