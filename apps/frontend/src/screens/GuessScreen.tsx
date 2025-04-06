@@ -1,11 +1,13 @@
 import { AgeEstimationGame__factory } from "@contracts/factories/contracts/AgeEstimationGame__factory";
-import { useQuery } from "@tanstack/react-query";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { ethers } from "ethers";
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, useParams } from "react-router-dom";
-import { useWalletClient } from "wagmi";
-import { Logo } from "../components";
+import { toast } from "react-toastify";
+import { useAccount, useWalletClient } from "wagmi";
+import { Button, Logo } from "../components";
 import BackendAPI from "../services/backend";
 import CloudinaryService from "../services/cloudinary.service";
 
@@ -21,6 +23,14 @@ interface AgeEstimation {
 interface GameInfo {
   endTime: bigint;
   isFinished: boolean;
+  betAmount: bigint;
+}
+
+interface UserBet {
+  player: string;
+  guessedAge: bigint;
+  isWinner: boolean;
+  isClaimed: boolean;
 }
 
 const formatTimeLeft = (seconds: number): string => {
@@ -36,7 +46,10 @@ export const GuessScreen = () => {
   const { id } = useParams<{ id: string }>();
   const estimationId = id ? parseInt(id, 10) : 0;
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [guessedAge, setGuessedAge] = useState<string>("");
   const { data: walletClient } = useWalletClient();
+  const { isConnected, address } = useAccount();
+  const { openConnectModal } = useConnectModal();
 
   const {
     data: ageEstimation,
@@ -66,10 +79,68 @@ export const GuessScreen = () => {
       return {
         endTime: game.endTime,
         isFinished: game.isFinished,
+        betAmount: game.betAmount,
       } as GameInfo;
     },
     enabled: !!ageEstimation && !!walletClient,
-    refetchInterval: 1000, // Refetch every second
+  });
+
+  const { data: userBet, refetch: refetchUserBet } = useQuery({
+    queryKey: ["userBet", estimationId, address],
+    queryFn: async () => {
+      if (!ageEstimation || !walletClient || !address) return null;
+
+      // Convert wallet client to ethers signer
+      const provider = new ethers.BrowserProvider(walletClient);
+      const signer = await provider.getSigner();
+
+      const contract = AgeEstimationGame__factory.connect(
+        import.meta.env.VITE_CONTRACT_ADDRESS,
+        signer
+      );
+
+      try {
+        const bet = await contract.getPlayerBet(BigInt(estimationId), address);
+        return {
+          player: bet.player,
+          guessedAge: bet.guessedAge,
+          isWinner: bet.isWinner,
+          isClaimed: bet.isClaimed,
+        } as UserBet;
+      } catch (error) {
+        // If bet doesn't exist, return null
+        return null;
+      }
+    },
+    enabled: !!ageEstimation && !!walletClient && !!address,
+  });
+
+  const placeBetMutation = useMutation({
+    mutationFn: async (age: number) => {
+      if (!walletClient || !gameInfo) throw new Error("No wallet connected");
+
+      // Convert wallet client to ethers signer
+      const provider = new ethers.BrowserProvider(walletClient);
+      const signer = await provider.getSigner();
+
+      const contract = AgeEstimationGame__factory.connect(
+        import.meta.env.VITE_CONTRACT_ADDRESS,
+        signer
+      );
+
+      const tx = await contract.placeBet(BigInt(estimationId), age, {
+        value: gameInfo.betAmount,
+      });
+      await tx.wait();
+      refetchUserBet();
+    },
+    onSuccess: () => {
+      toast.success("Bet placed successfully!");
+    },
+    onError: (error) => {
+      toast.error("Failed to place bet. Please try again.");
+      console.error("Place bet error:", error);
+    },
   });
 
   useEffect(() => {
@@ -129,6 +200,15 @@ export const GuessScreen = () => {
     : "Can you guess their age? | Age Lens Game";
   const description = `Check out what Age Lens guessed for this photo! Can it guess your age too?`;
 
+  const handlePlaceBet = () => {
+    const age = parseInt(guessedAge);
+    if (isNaN(age) || age <= 0) {
+      toast.error("Please enter a valid age");
+      return;
+    }
+    placeBetMutation.mutate(age);
+  };
+
   return (
     <>
       <Helmet>
@@ -165,19 +245,50 @@ export const GuessScreen = () => {
             {ageEstimation.estimated_age}
           </span>
           {timeLeft !== null && !gameInfo?.isFinished && (
-            <div className="mt-4 text-2xl font-bold">
-              Time left: {formatTimeLeft(timeLeft)}
-            </div>
+            <>
+              <div className="mt-4 text-2xl font-bold">
+                Time left: {formatTimeLeft(timeLeft)}
+              </div>
+              {!isConnected && (
+                <Button onClick={openConnectModal!} className="mt-4 w-48">
+                  CONNECT WALLET
+                </Button>
+              )}
+              {isConnected && !userBet && (
+                <div className="mt-4 flex flex-col items-center gap-2">
+                  <input
+                    type="number"
+                    value={guessedAge}
+                    onChange={(e) => setGuessedAge(e.target.value)}
+                    placeholder="Enter your guess"
+                    className="px-4 py-2 rounded-lg bg-white/10 text-white text-center text-xl w-48"
+                  />
+                  <Button
+                    onClick={handlePlaceBet}
+                    disabled={placeBetMutation.isPending || !guessedAge}
+                  >
+                    {placeBetMutation.isPending
+                      ? "PLACING BET..."
+                      : "PLACE BET"}
+                  </Button>
+                  <p className="text-white/60 text-sm">
+                    Bet amount: {ethers.formatEther(gameInfo?.betAmount || 0n)}{" "}
+                    ZETA
+                  </p>
+                </div>
+              )}
+              {isConnected && userBet && (
+                <div className="mt-4 text-xl font-bold">
+                  Your guess: {userBet.guessedAge.toString()}
+                </div>
+              )}
+            </>
           )}
           {gameInfo?.isFinished && (
             <div className="mt-4 text-2xl font-bold text-green-500">
               Game Finished
             </div>
           )}
-        </div>
-        <div className="text-white/60 text-xl">
-          <p>Wallet: {ageEstimation.wallet_address}</p>
-          <p>Created: {new Date(ageEstimation.created_at).toLocaleString()}</p>
         </div>
       </div>
     </>
