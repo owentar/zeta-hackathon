@@ -296,13 +296,13 @@ export const GuessScreen = () => {
         <meta property="twitter:description" content={description} />
         <meta property="twitter:image" content={imageUrl} />
       </Helmet>
-      <div className="flex flex-col justify-between items-center px-4 py-10 h-dvh">
+      <div className="flex flex-col justify-between items-center px-4 py-10 h-dvh overflow-y-auto">
         <Link to="/">
           <Logo />
         </Link>
 
-        <div className="rounded-full w-64 h-64 overflow-hidden">
-          <img className="w-full h-full object-cover" src={imageUrl} />
+        <div className="w-64 h-64 overflow">
+          <img className="rounded-full w-64 h-64 object-cover" src={imageUrl} />
         </div>
         <div className="flex flex-col items-center">
           <p className="text-[42px] font-bold">The Lens' Guess</p>
