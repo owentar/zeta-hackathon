@@ -99,18 +99,6 @@ export const GuessScreen = () => {
     enabled: !!ageEstimation && !!walletClient && !!address,
   });
 
-  const { data: allBets } = useQuery({
-    queryKey: ["allBets", estimationId, walletClient?.account.address],
-    queryFn: async () => {
-      if (!ageEstimation || !walletClient) return null;
-
-      const provider = new ethers.BrowserProvider(walletClient);
-
-      return AgeEstimationGameContract.getBets(provider, estimationId);
-    },
-    enabled: !!ageEstimation && !!walletClient && gameInfo?.isFinished,
-  });
-
   const placeBetMutation = useMutation({
     mutationFn: async (age: number) => {
       if (!walletClient || !gameInfo) throw new Error("No wallet connected");
