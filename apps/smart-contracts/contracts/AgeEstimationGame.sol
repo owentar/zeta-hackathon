@@ -131,6 +131,12 @@ contract AgeEstimationGame is Ownable, ReentrancyGuard {
 
         emit GameRevealed(_gameId, _actualAge);
 
+        // If pot is empty, no need to calculate winners or fees
+        if (game.potSize == 0) {
+            emit GameFinished(_gameId, new address[](0));
+            return;
+        }
+
         // Calculate winners
         Bet[] storage gameBets = bets[_gameId];
         uint256 minDifference = type(uint256).max;

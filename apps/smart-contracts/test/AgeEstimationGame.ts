@@ -257,4 +257,35 @@ describe("AgeEstimationGame", function () {
       expect(finalBalance2 - initialBalance2 + gasCost2).to.equal(winnersShare);
     });
   });
+
+  describe("No Bets Scenario", function () {
+    beforeEach(async function () {
+      const secretHash = await game.computeHash(SECRET_AGE, SALT);
+      await game.createGame(GAME_ID, secretHash, GAME_DURATION, BET_AMOUNT);
+      await time.increase(GAME_DURATION + 1);
+    });
+
+    it("Should allow revealing and finishing game when no bets are placed", async function () {
+      const initialBalance = await ethers.provider.getBalance(owner.address);
+
+      const tx = await game.revealAndFinishGame(GAME_ID, SECRET_AGE, SALT);
+      const receipt = await tx.wait();
+      const gasCost = receipt!.gasUsed * receipt!.gasPrice;
+
+      await expect(tx)
+        .to.emit(game, "GameRevealed")
+        .withArgs(GAME_ID, SECRET_AGE)
+        .and.to.emit(game, "GameFinished")
+        .withArgs(GAME_ID, []);
+
+      const finalBalance = await ethers.provider.getBalance(owner.address);
+      expect(finalBalance - initialBalance + gasCost).to.equal(0n);
+
+      const gameInfo = await game.games(GAME_ID);
+      expect(gameInfo.isRevealed).to.be.true;
+      expect(gameInfo.isFinished).to.be.true;
+      expect(gameInfo.actualAge).to.equal(SECRET_AGE);
+      expect(gameInfo.potSize).to.equal(0n);
+    });
+  });
 });
