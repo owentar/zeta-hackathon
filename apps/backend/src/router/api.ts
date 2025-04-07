@@ -154,24 +154,32 @@ apiRouter.post("/age-estimation/:id/start-game", async (req, res) => {
     return res.status(500).json({ error: "Failed to start game" });
   }
 
-  // Check if wallet was already airdropped
   const existingWallet = await checkWalletAirdropped(
     ageEstimation.wallet_address,
     ageEstimation.chain_id
   );
 
   if (!existingWallet) {
-    await createAirdroppedWallet({
-      wallet_address: ageEstimation.wallet_address,
-      status: "QUEUED",
-      chain_id: ageEstimation.chain_id,
-    });
+    // Check if wallet was already airdropped
+    try {
+      await createAirdroppedWallet({
+        wallet_address: ageEstimation.wallet_address,
+        status: "QUEUED",
+        chain_id: ageEstimation.chain_id,
+      });
 
-    // Add to airdrop queue
-    await addAirdropJob({
-      walletAddress: ageEstimation.wallet_address,
-      chainId: ageEstimation.chain_id,
-    });
+      // Add to airdrop queue
+      await addAirdropJob({
+        walletAddress: ageEstimation.wallet_address,
+        chainId: ageEstimation.chain_id,
+      });
+    } catch (error) {
+      logger.error({
+        msg: "Failed to check if wallet was already airdropped",
+        error,
+        id,
+      });
+    }
   }
 
   // Return the hash that will be used in the smart contract

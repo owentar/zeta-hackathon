@@ -261,7 +261,7 @@ export const GuessScreen = () => {
           <span className="text-[126px] font-bold">
             {ageEstimation.estimated_age}
           </span>
-          {timeLeft !== null && !gameInfo?.isFinished && (
+          {timeLeft !== null && timeLeft > 0 && !gameInfo?.isFinished && (
             <>
               <div className="mt-4 text-2xl font-bold">
                 Time left: {formatTimeLeft(timeLeft)}
@@ -299,24 +299,28 @@ export const GuessScreen = () => {
                   Your guess: {userBet.guessedAge.toString()}
                 </div>
               )}
-              {gameInfo && ageEstimation && (
-                <div className="flex flex-col gap-4">
-                  {gameInfo.owner === address &&
-                    gameInfo.endTime < Date.now() / 1000 &&
-                    !gameInfo.isFinished && (
-                      <Button
-                        onClick={() => revealAndFinishMutation.mutate()}
-                        disabled={revealAndFinishMutation.isPending}
-                      >
-                        {revealAndFinishMutation.isPending
-                          ? "Revealing..."
-                          : "Reveal and Finish Game"}
-                      </Button>
-                    )}
-                </div>
-              )}
             </>
           )}
+          {timeLeft !== null &&
+            timeLeft <= 0 &&
+            gameInfo &&
+            !gameInfo.isFinished &&
+            ageEstimation && (
+              <div className="flex flex-col gap-4">
+                {gameInfo.owner === address &&
+                  gameInfo.endTime < Date.now() / 1000 &&
+                  !gameInfo.isFinished && (
+                    <Button
+                      onClick={() => revealAndFinishMutation.mutate()}
+                      disabled={revealAndFinishMutation.isPending}
+                    >
+                      {revealAndFinishMutation.isPending
+                        ? "Revealing..."
+                        : "Reveal and Finish Game"}
+                    </Button>
+                  )}
+              </div>
+            )}
           {gameInfo?.isFinished && (
             <>
               <div className="mt-4 text-2xl font-bold text-green-500">
