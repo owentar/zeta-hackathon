@@ -22,7 +22,7 @@ const getAgeEstimation = async (id: number) => {
     wallet_address: string;
     chain_id: number;
     created_at: string;
-    status: string;
+    status: "REVEALED" | "UNREVEALED";
   }>(`${API_URL}/age-estimation/${id}`);
   return data;
 };

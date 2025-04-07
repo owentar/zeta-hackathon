@@ -7,10 +7,8 @@ interface SocialShareProps {
 }
 
 export const SocialShare = ({ title, url }: SocialShareProps) => {
-  const shareText = `I just placed a bet on Age Lens! Can you guess the age better than me? ${title}`;
-
   const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-    shareText
+    title
   )}&url=${encodeURIComponent(url)}`;
 
   const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
@@ -19,7 +17,7 @@ export const SocialShare = ({ title, url }: SocialShareProps) => {
 
   return (
     <div className="flex flex-col items-center gap-4 mt-8">
-      <p className="text-xl font-bold">Share your bet!</p>
+      <p className="text-xl font-bold">Share it!</p>
       <div className="flex gap-6">
         <a
           href={twitterUrl}

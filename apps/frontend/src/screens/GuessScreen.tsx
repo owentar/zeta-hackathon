@@ -1,7 +1,7 @@
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ethers } from "ethers";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -36,6 +36,7 @@ export const GuessScreen = () => {
     wallet_address: string;
     chain_id: number;
     created_at: string;
+    status: "REVEALED" | "UNREVEALED";
   }
 
   const {
@@ -49,7 +50,7 @@ export const GuessScreen = () => {
     enabled: !!estimationId,
   });
 
-  const { data: gameInfo } = useQuery({
+  const { data: gameInfo, refetch: refetchGameInfo } = useQuery({
     queryKey: ["gameInfo", estimationId, walletClient?.account.address],
     queryFn: async () => {
       if (!ageEstimation || !walletClient) return null;
@@ -57,16 +58,21 @@ export const GuessScreen = () => {
       // Convert wallet client to ethers signer
       const provider = new ethers.BrowserProvider(walletClient);
 
-      const game = await AgeEstimationGameContract.getGame(
-        provider,
-        estimationId
-      );
-      return {
-        endTime: game.endTime,
-        isFinished: game.isFinished,
-        betAmount: game.betAmount,
-        owner: game.owner,
-      };
+      try {
+        const game = await AgeEstimationGameContract.getGame(
+          provider,
+          estimationId
+        );
+        return {
+          endTime: game.endTime,
+          isFinished: game.isFinished,
+          betAmount: game.betAmount,
+          owner: game.owner,
+        };
+      } catch (error) {
+        // If game doesn't exist, return null
+        return null;
+      }
     },
     enabled: !!ageEstimation && !!walletClient,
   });
@@ -130,6 +136,7 @@ export const GuessScreen = () => {
     onSuccess: () => {
       toast.success("Game revealed and finished successfully!");
       refetchAgeEstimation();
+      refetchGameInfo();
     },
     onError: (error) => {
       toast.error("Failed to reveal and finish game. Please try again.");
@@ -160,6 +167,37 @@ export const GuessScreen = () => {
     },
   });
 
+  const startGameMutation = useMutation({
+    mutationFn: async () => {
+      const { ageHash, isRewarded } = await BackendAPI.startGame(estimationId);
+
+      // Create game in smart contract
+      if (!walletClient) {
+        throw new Error("No wallet client available");
+      }
+
+      // Convert wallet client to ethers signer
+      const provider = new ethers.BrowserProvider(walletClient);
+
+      const tx = await AgeEstimationGameContract.createGame(
+        provider,
+        estimationId,
+        ageHash
+      );
+
+      await tx.wait();
+      return { ageHash, isRewarded };
+    },
+    onSuccess: () => {
+      refetchAgeEstimation();
+      refetchGameInfo();
+    },
+    onError: (error) => {
+      toast.error("Failed to start game. Please try again.");
+      console.error("Start game error:", error);
+    },
+  });
+
   useEffect(() => {
     if (!gameInfo?.endTime) return;
 
@@ -174,6 +212,16 @@ export const GuessScreen = () => {
     const interval = setInterval(updateTimeLeft, 1000);
     return () => clearInterval(interval);
   }, [gameInfo?.endTime]);
+
+  const isGameRegistered = useMemo(
+    () => gameInfo?.owner !== ethers.ZeroAddress,
+    [gameInfo]
+  );
+
+  const isGameOwner = useMemo(
+    () => ageEstimation?.wallet_address === address?.toLowerCase(),
+    [ageEstimation, address]
+  );
 
   if (isLoading) {
     return (
@@ -261,53 +309,85 @@ export const GuessScreen = () => {
           <span className="text-[126px] font-bold">
             {ageEstimation.estimated_age}
           </span>
-          {timeLeft !== null && timeLeft > 0 && !gameInfo?.isFinished && (
-            <>
-              <div className="mt-4 text-2xl font-bold">
-                Time left: {formatTimeLeft(timeLeft)}
-              </div>
+          {!isGameRegistered && ageEstimation.status === "UNREVEALED" && (
+            <div className="flex gap-2 mt-4">
               {!isConnected && (
-                <Button onClick={openConnectModal!} className="mt-4 w-48">
+                <Button onClick={openConnectModal!} className="w-full">
                   CONNECT WALLET
                 </Button>
               )}
-              {isConnected && !userBet && (
-                <div className="mt-4 flex flex-col items-center gap-2">
-                  <input
-                    type="number"
-                    value={guessedAge}
-                    onChange={(e) => setGuessedAge(e.target.value)}
-                    placeholder="Enter your guess"
-                    className="px-4 py-2 rounded-lg bg-white/10 text-white text-center text-xl w-48"
-                  />
-                  <Button
-                    onClick={handlePlaceBet}
-                    disabled={placeBetMutation.isPending || !guessedAge}
-                  >
-                    {placeBetMutation.isPending
-                      ? "PLACING BET..."
-                      : "PLACE BET"}
-                  </Button>
-                  <p className="text-white/60 text-sm">
-                    Bet amount: {ethers.formatEther(gameInfo?.betAmount || 0n)}{" "}
-                    ZETA
-                  </p>
-                </div>
+              {isConnected && (
+                <>
+                  {isGameOwner && (
+                    <Button
+                      onClick={() => startGameMutation.mutate()}
+                      disabled={startGameMutation.isPending}
+                      className="w-full"
+                    >
+                      {startGameMutation.isPending
+                        ? "STARTING..."
+                        : "START GAME"}
+                    </Button>
+                  )}
+                  {!isGameOwner && (
+                    <p className="text-white/60 text-xl">
+                      Game has not started yet
+                    </p>
+                  )}
+                </>
               )}
-              {isConnected && userBet && (
-                <div className="mt-4 text-xl font-bold">
-                  Your guess: {userBet.guessedAge.toString()}
-                </div>
-              )}
-            </>
+            </div>
           )}
-          {timeLeft !== null &&
+          {gameInfo &&
+            timeLeft !== null &&
+            timeLeft > 0 &&
+            !gameInfo.isFinished && (
+              <>
+                <div className="mt-4 text-2xl font-bold">
+                  Time left: {formatTimeLeft(timeLeft)}
+                </div>
+                {!isConnected && (
+                  <Button onClick={openConnectModal!} className="mt-4 w-48">
+                    CONNECT WALLET
+                  </Button>
+                )}
+                {isConnected && !userBet && (
+                  <div className="mt-4 flex flex-col items-center gap-2">
+                    <input
+                      type="number"
+                      value={guessedAge}
+                      onChange={(e) => setGuessedAge(e.target.value)}
+                      placeholder="Enter your guess"
+                      className="px-4 py-2 rounded-lg bg-white/10 text-white text-center text-xl w-48"
+                    />
+                    <Button
+                      onClick={handlePlaceBet}
+                      disabled={placeBetMutation.isPending || !guessedAge}
+                    >
+                      {placeBetMutation.isPending
+                        ? "PLACING BET..."
+                        : "PLACE BET"}
+                    </Button>
+                    <p className="text-white/60 text-sm">
+                      Bet amount:{" "}
+                      {ethers.formatEther(gameInfo?.betAmount || 0n)} ZETA
+                    </p>
+                  </div>
+                )}
+                {isConnected && userBet && (
+                  <div className="mt-4 text-xl font-bold">
+                    Your guess: {userBet.guessedAge.toString()}
+                  </div>
+                )}
+              </>
+            )}
+          {gameInfo &&
+            timeLeft !== null &&
             timeLeft <= 0 &&
-            gameInfo &&
             !gameInfo.isFinished &&
             ageEstimation && (
               <div className="flex flex-col gap-4">
-                {gameInfo.owner === address &&
+                {isGameOwner &&
                   gameInfo.endTime < Date.now() / 1000 &&
                   !gameInfo.isFinished && (
                     <Button
@@ -318,6 +398,13 @@ export const GuessScreen = () => {
                         ? "Revealing..."
                         : "Reveal and Finish Game"}
                     </Button>
+                  )}
+                {!isGameOwner &&
+                  gameInfo.endTime < Date.now() / 1000 &&
+                  !gameInfo.isFinished && (
+                    <p className="text-white/60 text-xl">
+                      Game has finished, await the results
+                    </p>
                   )}
               </div>
             )}
@@ -370,13 +457,11 @@ export const GuessScreen = () => {
             </>
           )}
         </div>
-        {isConnected && userBet && (
-          <SocialShare
-            title={`I bet Age Lens guessed ${userBet.guessedAge.toString()} years! How about you?`}
-            url={window.location.href}
-            imageUrl={imageUrl}
-          />
-        )}
+        <SocialShare
+          title={`I'm playing Age Lens! Come! Join me and earn prizes guessing the age of this photo!`}
+          url={window.location.href}
+          imageUrl={imageUrl}
+        />
       </div>
     </>
   );
